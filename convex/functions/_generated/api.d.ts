@@ -9,6 +9,7 @@
  */
 
 import type * as reports from "../reports.js";
+import type * as seed from "../seed.js";
 
 import type {
   ApiFromModules,
@@ -18,6 +19,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   reports: typeof reports;
+  seed: typeof seed;
 }>;
 
 /**

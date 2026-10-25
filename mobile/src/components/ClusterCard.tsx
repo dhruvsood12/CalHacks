@@ -39,14 +39,25 @@ export function ClusterCard({ cluster, onClose }: { cluster: ReportCluster; onCl
   const authority = authorityOf(report.agency);
   const percent = Math.round(report.confidence * 100);
   const modelName = categoryInfo(report.model_label)?.display_name ?? report.model_label;
+  const submitted = report.submitted_label ?? report.model_label;
+  const submittedName = categoryInfo(submitted)?.display_name ?? submitted;
 
   const category =
     report.chosen_by === 'model'
       ? `Model's top pick, ${percent}%`
-      : `Picked by the resident (model was unsure; ${percent}% for ${modelName})`;
-  const claude = report.agrees_with_classifier
-    ? 'Agreed with the category'
-    : `Changed it from ${modelName} to ${report.display_name}`;
+      : `Picked by the resident: ${submittedName}. Model's top guess was ${modelName}, ${percent}%`;
+  const claude =
+    report.model_version === 'mock'
+      ? 'Mock data: no Claude call was made'
+      : report.agrees_with_classifier
+        ? 'Agreed with the category'
+        : `Changed it from ${submittedName} to ${report.display_name}`;
+  const source =
+    report.model_version === 'mock'
+      ? 'Mock data: no model or Claude call was made'
+      : report.model_version === 'demo-seed'
+        ? 'Seeded demo report'
+        : `Model ${report.model_version}`;
 
   return (
     <View style={styles.card}>
@@ -79,7 +90,7 @@ export function ClusterCard({ cluster, onClose }: { cluster: ReportCluster; onCl
       <Why label="Claude" value={claude} />
       <Why label="Location" value={`${SOURCE_WHY[report.location_source]}${report.address ? ` · ${report.address}` : ''}`} />
       <Text style={styles.meta}>
-        Model {report.model_version} · report written in {report.language}
+        {source} · report written in {report.language}
       </Text>
     </View>
   );

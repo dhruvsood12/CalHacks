@@ -8,6 +8,7 @@ import {
   Classification,
   GeoPoint,
   PreparedPhoto,
+  NOTE_LIMIT,
   Report,
   ReportRequest,
   api,
@@ -32,6 +33,15 @@ type Params = {
 };
 
 type Duplicate = 'confirm' | 'file' | null;
+
+type ContextState = 'idle' | 'loading' | 'ready' | 'error' | 'skipped';
+
+function clampNote(userNote: string, extras: string[]) {
+  const extra = extras.join(' ');
+  const room = NOTE_LIMIT - (extra ? extra.length + 1 : 0);
+  const note = userNote.length > room ? `${userNote.slice(0, Math.max(0, room - 1))}…` : userNote;
+  return [note, extra].filter(Boolean).join(' ').slice(0, NOTE_LIMIT);
+}
 
 function days(n: number) {
   const rounded = Math.max(1, Math.round(n));
@@ -64,7 +74,7 @@ function mapDraft(
   source: LocationSource,
   context: CityContext | null,
 ): NewReport {
-  const picked = classification.top_k.find((candidate) => candidate.label === selected);
+  const top = classification.top_k[0];
   const reported = classification.top_k.find((candidate) => candidate.label === report.category);
   return {
     category: report.category,
@@ -75,12 +85,13 @@ function mapDraft(
     address: address || null,
     location_source: source,
     language: report.language,
-    title_en: report.title_en,
-    model_label: selected,
-    confidence: picked?.prob ?? 0,
-    chosen_by: !classification.abstain && selected === classification.top_k[0].label ? 'model' : 'resident',
-    agrees_with_classifier: report.agrees_with_classifier,
-    model_version: classification.model_version,
+    title_en: report.title_en.slice(0, 200),
+    model_label: top.label,
+    submitted_label: selected,
+    confidence: top.prob,
+    chosen_by: !classification.abstain && selected === top.label ? 'model' : 'resident',
+    agrees_with_classifier: report.category === selected,
+    model_version: usingMock ? 'mock' : classification.model_version,
     city_open_nearby: context?.nearby_open.length ?? 0,
   };
 }
@@ -256,9 +267,14 @@ export default function ResultScreen() {
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [context, setContext] = useState<CityContext | null>(null);
+  const [contextState, setContextState] = useState<ContextState>('idle');
+  const [contextError, setContextError] = useState<string | null>(null);
+  const [contextAttempt, setContextAttempt] = useState(0);
+  const [classifyAttempt, setClassifyAttempt] = useState(0);
   const [duplicate, setDuplicate] = useState<Duplicate>(null);
   const [report, setReport] = useState<Report | null>(null);
   const [reportState, setReportState] = useState<'idle' | 'loading' | 'error'>('idle');
+  const [reportError, setReportError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -281,42 +297,51 @@ export default function ResultScreen() {
     return () => {
       cancelled = true;
     };
-  }, [params.uri]);
+  }, [params.uri, classifyAttempt]);
 
   useEffect(() => {
     setContext(null);
+    setContextError(null);
     setDuplicate(null);
     setReport(null);
     if (!selected || !location) {
+      setContextState('idle');
       return;
     }
+    setContextState('loading');
     let cancelled = false;
     api
       .context(selected, location)
       .then((result) => {
         if (!cancelled) {
           setContext(result);
+          setContextState('ready');
         }
       })
-      .catch(() => {});
+      .catch((e) => {
+        if (!cancelled) {
+          setContextError(e instanceof Error ? e.message : String(e));
+          setContextState('error');
+        }
+      });
     return () => {
       cancelled = true;
     };
-  }, [selected]);
+  }, [selected, contextAttempt]);
 
   async function writeReport() {
     if (!photo || !classification || !selected) {
       return;
     }
-    const notes = [params.note ?? ''];
+    const extras: string[] = [];
     if (!location && params.address) {
-      notes.push(`Location: ${params.address}.`);
+      extras.push(`Location: ${params.address}.`);
     }
     const nearest = context?.nearby_open[0];
     if (duplicate === 'confirm' && nearest) {
-      notes.push(`Also seen on ${today()}. Same problem as open case ${nearest.service_request_id}.`);
+      extras.push(`Also seen on ${today()}. Same problem as open case ${nearest.service_request_id}.`);
     }
-    const userNote = notes.filter(Boolean).join(' ');
+    const userNote = clampNote(params.note ?? '', extras);
     const request: ReportRequest = {
       image_b64: photo.base64,
       media_type: 'image/jpeg',
@@ -327,10 +352,12 @@ export default function ResultScreen() {
       user_note: userNote || null,
     };
     setReportState('loading');
+    setReportError(null);
     try {
       setReport(await api.report(request));
       setReportState('idle');
-    } catch {
+    } catch (e) {
+      setReportError(e instanceof Error ? e.message : String(e));
       setReportState('error');
     }
   }
@@ -340,6 +367,15 @@ export default function ResultScreen() {
       <View style={styles.center}>
         <Text style={styles.cardTitle}>Couldn't identify this photo</Text>
         <Text style={styles.body}>{error}</Text>
+        <Pressable
+          style={[styles.primaryButton, styles.retry]}
+          onPress={() => {
+            setError(null);
+            setClassifyAttempt((n) => n + 1);
+          }}
+        >
+          <Text style={styles.primaryButtonText}>Retry</Text>
+        </Pressable>
       </View>
     );
   }
@@ -355,7 +391,17 @@ export default function ResultScreen() {
 
   const needsChoice = classification.abstain && !selected;
   const hasDuplicate = (context?.nearby_open.length ?? 0) > 0;
-  const canWrite = !!selected && (!hasDuplicate || duplicate !== null);
+  const contextSettled = !location || contextState === 'ready' || contextState === 'skipped';
+  const canWrite = !!selected && contextSettled && (!hasDuplicate || duplicate !== null);
+  const writeLabel = needsChoice
+    ? 'Pick a category first'
+    : contextState === 'loading'
+      ? 'Checking for existing reports…'
+      : contextState === 'error' || (hasDuplicate && !duplicate)
+        ? 'Choose an option above'
+        : reportState === 'error'
+          ? 'Try writing the report again'
+          : 'Write my report';
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content} contentInsetAdjustmentBehavior="automatic">
@@ -368,7 +414,7 @@ export default function ResultScreen() {
               ? `${params.address}${params.source ? ` · ${SOURCE_LABEL[params.source]}` : ''}`
               : 'No location'}
           </Text>
-          {classification.used_location ? <Text style={styles.muted}>Location helped the prediction</Text> : null}
+          {classification.used_location ? <Text style={styles.muted}>Location used as a second signal</Text> : null}
         </View>
       </View>
 
@@ -389,6 +435,32 @@ export default function ResultScreen() {
       ))}
 
       {context ? <ContextCard context={context} duplicate={duplicate} onDuplicate={setDuplicate} /> : null}
+      {contextState === 'loading' ? (
+        <View style={[styles.card, styles.row]}>
+          <ActivityIndicator color={colors.accent} />
+          <Text style={styles.body}>Checking for existing reports nearby…</Text>
+        </View>
+      ) : null}
+      {contextState === 'error' ? (
+        <View style={[styles.card, styles.unsure]}>
+          <Text style={styles.cardTitle}>Couldn't check whether this was already reported</Text>
+          <Text style={styles.muted}>{contextError}</Text>
+          <View style={styles.row}>
+            <Pressable style={styles.smallButton} onPress={() => setContextAttempt((n) => n + 1)}>
+              <Text style={styles.smallButtonText}>Retry</Text>
+            </Pressable>
+            <Pressable style={styles.smallButton} onPress={() => setContextState('skipped')}>
+              <Text style={styles.smallButtonText}>Continue without the check</Text>
+            </Pressable>
+          </View>
+        </View>
+      ) : null}
+      {contextState === 'skipped' ? (
+        <Text style={styles.muted}>Duplicate check skipped. This report may already be open with the city.</Text>
+      ) : null}
+      {selected && !location ? (
+        <Text style={styles.muted}>No map location, so we couldn't check for existing reports.</Text>
+      ) : null}
 
       {report ? (
         <ReportCard
@@ -424,18 +496,19 @@ export default function ResultScreen() {
           {reportState === 'loading' ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.primaryButtonText}>
-              {needsChoice
-                ? 'Pick a category first'
-                : hasDuplicate && !duplicate
-                  ? 'Choose an option above'
-                  : 'Write my report'}
-            </Text>
+            <Text style={styles.primaryButtonText}>{writeLabel}</Text>
           )}
         </Pressable>
       )}
       {reportState === 'error' ? (
-        <Text style={styles.errorText}>The report writer is unavailable. Your category and agency above are still right to use.</Text>
+        <View style={[styles.card, styles.unsure]}>
+          <Text style={styles.cardTitle}>The report writer didn't answer</Text>
+          {reportError ? <Text style={styles.muted}>{reportError}</Text> : null}
+          <Text style={styles.body}>
+            Your photo, category and choices are kept. Try again, or use the category and agency above to file on
+            sf311.org.
+          </Text>
+        </View>
       ) : null}
     </ScrollView>
   );
@@ -498,4 +571,5 @@ const styles = StyleSheet.create({
   emergencyButton: { borderRadius: 10, paddingVertical: 14, alignItems: 'center', backgroundColor: colors.danger },
   emergencyButtonText: { color: '#fff', fontSize: 17, fontWeight: '700' },
   errorText: { fontSize: 14, color: colors.danger },
+  retry: { alignSelf: 'stretch', marginTop: 8 },
 });
