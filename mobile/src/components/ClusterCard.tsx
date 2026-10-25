@@ -46,9 +46,12 @@ export function ClusterCard({ cluster, onClose }: { cluster: ReportCluster; onCl
     report.chosen_by === 'model'
       ? `Model's top pick, ${percent}%`
       : `Picked by the resident: ${submittedName}. Model's top guess was ${modelName}, ${percent}%`;
-  const claude = report.agrees_with_classifier
-    ? 'Agreed with the category'
-    : `Changed it from ${submittedName} to ${report.display_name}`;
+  const claude =
+    report.model_version === 'mock'
+      ? 'Mock data: no Claude call was made'
+      : report.agrees_with_classifier
+        ? 'Agreed with the category'
+        : `Changed it from ${submittedName} to ${report.display_name}`;
   const source =
     report.model_version === 'mock'
       ? 'Mock data: no model or Claude call was made'
