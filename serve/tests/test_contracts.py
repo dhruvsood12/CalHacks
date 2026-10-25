@@ -120,3 +120,27 @@ def test_report_unexpected_error_is_503(client, monkeypatch):
     r = client.post("/report", json={"image_b64": "AAAA", "media_type": "image/jpeg", "classification": cls,
                                      "language": "en"})
     assert r.status_code == 503
+
+
+def test_report_rate_limit(client, monkeypatch):
+    import serve.app as appmod
+    monkeypatch.setattr(appmod, "REPORT_LIMIT", (2, 600))
+    appmod._report_hits.clear()
+    cls = client.post("/classify", files={"image": ("p.jpg", jpeg(), "image/jpeg")}).json()
+    body = {"image_b64": "AAAA", "media_type": "image/jpeg", "classification": cls, "language": "en"}
+    codes = [client.post("/report", json=body, headers={"cf-connecting-ip": "1.2.3.4"}).status_code for _ in range(3)]
+    assert codes == [200, 200, 429]
+    assert client.post("/report", json=body, headers={"cf-connecting-ip": "5.6.7.8"}).status_code == 200
+    appmod._report_hits.clear()
+
+
+def test_env_loader_never_overrides(tmp_path, monkeypatch):
+    import serve.app as appmod
+    env = tmp_path / ".env"
+    env.write_text("# comment\nSNAP311_TEST_A='from file'\nSNAP311_TEST_B=file\n")
+    monkeypatch.setattr(appmod, "ENV_PATH", env)
+    monkeypatch.setenv("SNAP311_TEST_B", "from env")
+    monkeypatch.delenv("SNAP311_TEST_A", raising=False)
+    appmod.load_env()
+    import os
+    assert os.environ["SNAP311_TEST_A"] == "from file" and os.environ["SNAP311_TEST_B"] == "from env"
