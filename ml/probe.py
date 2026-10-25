@@ -20,7 +20,7 @@ from sklearn.metrics import f1_score
 
 from ml.data import CLASSES, ROOT
 
-C_GRID = (0.01, 0.03, 0.1, 0.3, 1.0)
+C_GRID = (0.0003, 0.001, 0.003, 0.01, 0.03, 0.1, 0.3, 1.0)
 
 
 def fit(x, y, c, n_classes):
@@ -79,33 +79,55 @@ def run_one(feat_dir):
             "device": str(tr["device"]), "n_train": int(len(yt)), "n_val": int(len(yv)), "c_sweep": sweep}
 
 
+def build_report():
+    """Aggregate every runs/probes/*/metrics.json (written per run, so parallel jobs never race)."""
+    runs = {}
+    for f in sorted((ROOT / "runs" / "probes").glob("*/metrics.json")):
+        runs[f.parent.name] = json.loads(f.read_text())
+    chosen = {}
+    for name, r in runs.items():
+        bb = name.rsplit("-", 1)[0]
+        if bb not in chosen or r["val_macro_f1"] > runs[chosen[bb]]["val_macro_f1"]:
+            chosen[bb] = name
+    report = {"runs": runs,
+              "chosen_crop_mode": {bb: runs[n]["crop_mode"] for bb, n in sorted(chosen.items())},
+              "note": ("Frozen-feature linear probes; L2 strength and crop mode chosen on val. "
+                       "These are the baseline the fine-tuned models must beat; test is not used here."),
+              "git_sha": subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=ROOT,
+                                        capture_output=True, text=True).stdout.strip()}
+    (ROOT / "reports" / "probe_bakeoff.json").write_text(json.dumps(report, indent=2) + "\n")
+    return report
+
+
+def chosen_crop(backbone):
+    best = None
+    for f in (ROOT / "runs" / "probes").glob(f"{backbone}-*/metrics.json"):
+        r = json.loads(f.read_text())
+        if best is None or r["val_macro_f1"] > best["val_macro_f1"]:
+            best = r
+    return best["crop_mode"]
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--only", nargs="*")
+    ap.add_argument("--report-only", action="store_true")
+    ap.add_argument("--chosen-crop", help="print the val-chosen crop mode for this backbone and exit")
     args = ap.parse_args()
-    feat_root = ROOT / "runs" / "features"
-    dirs = sorted(d for d in feat_root.iterdir() if (d / "val.npz").exists())
-    if args.only:
-        dirs = [d for d in dirs if d.name in args.only]
-    report_path = ROOT / "reports" / "probe_bakeoff.json"
-    report = json.loads(report_path.read_text()) if report_path.exists() else {"runs": {}}
-    for d in dirs:
-        report["runs"][d.name] = run_one(d)
-        r = report["runs"][d.name]
-        print(f"{d.name:22s} top1={r['val_top1']:.3f} top3={r['val_top3']:.3f} "
-              f"macroF1={r['val_macro_f1']:.3f} C={r['C']}", flush=True)
-    chosen = {}
-    for name, r in report["runs"].items():
-        bb = name.rsplit("-", 1)[0]
-        if bb not in chosen or r["val_macro_f1"] > report["runs"][chosen[bb]]["val_macro_f1"]:
-            chosen[bb] = name
-    report["chosen_crop_mode"] = {bb: report["runs"][n]["crop_mode"] for bb, n in sorted(chosen.items())}
-    report["note"] = ("Frozen-feature linear probes; L2 strength and crop mode chosen on val. "
-                      "These are the baseline the fine-tuned models must beat; test is not used here.")
-    report["git_sha"] = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=ROOT,
-                                       capture_output=True, text=True).stdout.strip()
-    report_path.write_text(json.dumps(report, indent=2) + "\n")
-    print("chosen crop mode:", report["chosen_crop_mode"])
+    if args.chosen_crop:
+        print(chosen_crop(args.chosen_crop))
+        return
+    if not args.report_only:
+        feat_root = ROOT / "runs" / "features"
+        dirs = sorted(d for d in feat_root.iterdir() if (d / "val.npz").exists())
+        if args.only:
+            dirs = [d for d in dirs if d.name in args.only]
+        for d in dirs:
+            r = run_one(d)
+            (ROOT / "runs" / "probes" / d.name / "metrics.json").write_text(json.dumps(r, indent=2))
+            print(f"{d.name:22s} top1={r['val_top1']:.3f} top3={r['val_top3']:.3f} "
+                  f"macroF1={r['val_macro_f1']:.3f} C={r['C']}", flush=True)
+    print("chosen crop mode:", build_report()["chosen_crop_mode"])
 
 
 if __name__ == "__main__":
