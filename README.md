@@ -1,22 +1,30 @@
 # Snap311 · Cal Hacks 13.0
 
-**Photograph a street problem in San Francisco. Snap311 finds where it is, names the problem and the city agency that usually handles it, tells you whether it is already reported nearby and how long it typically takes to fix, and writes the report in your language with an English copy for the city. You file it. We never file for you.**
+**Photograph a street problem in San Francisco. Snap311 finds where it is, names the problem and the city agency that usually handles it, checks whether it is already reported nearby and how long it typically takes to fix, and writes the report in your language with an English copy for the city. You file it. We never file for you.**
 
 ## Who it is for
-San Francisco residents who want to report a street problem but don't want to work through 311's menus in English. SF311's own app files in five languages (English, Traditional Chinese, Spanish, Filipino, Vietnamese; [docs/WHY.md](docs/WHY.md) §1). Snap311 writes the report in the resident's language with Claude, including languages outside that list, and always adds an English copy for city staff.
+San Francisco residents who want to report a street problem but would rather not work through 311's category menus in English. SF311's own app files in five languages: English, Traditional Chinese, Spanish, Filipino and Vietnamese ([docs/WHY.md](docs/WHY.md) §1). Snap311 lets the resident pick the report language (English, Español, 中文, Filipino, Tiếng Việt, Русский). Claude writes the report in that language and always adds an English copy for city staff.
+
+This framing comes from SF311's published language coverage and the city's own 311 data. We have not run user interviews or partnered with community organizations.
 
 ## The problem
-Reporting a pothole, broken streetlight or dumped mattress means picking the right category from dozens of 311 types, placing a pin, and guessing whether someone already reported it. In the city's own data, **44.4% of new reports had an earlier report of the same type, still open, within 50 m** (`docs/evidence/city_context_stats.json` → `overall.already_open_nearby_pct`). SF311 shows no duplicate warning before you file and no typical fix time.
+Reporting a pothole, a broken streetlight or a dumped mattress means picking the right type from dozens of 311 categories, placing a pin, and guessing whether someone already reported it. In the city's own data for June 15–29, 2025, **44.4% of 28,431 new reports had an earlier same-type report, still open, within 50 m, filed in the previous 14 days** (`docs/evidence/city_context_stats.json` → `overall`). SF311 shows a recent-requests list, but no duplicate warning before you file and no typical fix time ([docs/WHY.md](docs/WHY.md)).
 
 ## What it does
 | Step | What the resident sees | Where it comes from |
 |---|---|---|
 | Photo | Camera or library | `mobile/` |
-| **Where** | The address, and **where it came from**: "from the photo" (its own GPS), "your location" (phone GPS), or "address you entered" | Photo EXIF, `expo-location`, geocoding inside SF only |
-| **What** | Top 3 categories with confidence and the agency that usually handles each. Below a confidence threshold it says **"Not sure"** and the resident picks | Vision model fine-tuned on SF 311 photos (`ml/`, `serve/`) |
-| **Already reported?** | "Someone reported this 2 days ago, 38 m away. Still open." → *Add mine as confirmation* or *File anyway*, plus the typical fix time | Live DataSF 311 data (`serve/citydata.py`) |
-| **Report** | Title, description and next steps in the resident's language, an English copy, **Copy report**, Open sf311.org. Danger (wires, gas, fire) shows **Call 911** instead | Claude (`claude-opus-5-5`, `serve/claude_report.py`) |
-| **Live map** | Every added report as a pin colored by agency; same-type reports within 75 m grouped with a count. Tap a pin for the agency and **why**: usual agency for the category, model pick or resident pick, whether Claude agreed, where the location came from | Convex live queries (`convex/functions/`) |
+| **Where** | The address and **where it came from**: "from the photo" (its own GPS), "your location" (phone GPS) or "address you entered" | Photo EXIF, `expo-location`, and geocoding accepted only inside SF |
+| **What** | The top 3 categories with confidence and the agency that usually handles each. Below the confidence threshold it says **"Not sure"** and the resident picks | Vision model trained on SF 311 photos (`ml/`), served by `serve/` |
+| **Already reported?** | Open same-type reports within 75 m (*Add mine as confirmation* or *File anyway*), plus the typical fix time | DataSF 311 data (`serve/citydata.py`) |
+| **Report** | Title, description and next steps in the chosen language, an English copy, **Copy report** and Open sf311.org. Immediate danger shows **Call 911** instead | Claude (`claude-opus-5-5`) with structured output (`serve/claude_report.py`) |
+| **Live map** | Each added report as a pin colored by agency; same-type reports within 75 m grouped with a count. Tap a pin for the agency and **why**: usual agency for the category, model pick or resident pick, whether Claude agreed, and where the location came from | Convex live queries (`convex/functions/`) |
+
+### Why Claude is central
+- **Language access:** Claude writes the report in the resident's language and in English from the photo, the category, the location and the note. Without it the report is English-only.
+- **A second opinion:** Claude sees the photo and the classifier's top 3. It confirms or changes the category, can answer `not_a_311_issue`, and the map records whether it agreed.
+- **Safety:** Claude flags immediate danger (downed wire, gas, fire, injury), and the app then shows Call 911 instead of a filing flow.
+- **Measured, not assumed:** the team evaluates Claude zero-shot on the same sealed test subset as the fine-tuned model (`eval/`).
 
 The map stores the category, agency, location, an English title and how each decision was made. **It never stores the photo.**
 
@@ -26,44 +34,48 @@ The map stores the category, agency, location, an English title and how each dec
 cd convex && npm install
 npx convex login
 npx convex dev
-npm run seed
 ```
-`npx convex dev` prints the deployment URL. `npm run seed` loads 7 demo reports, including a 3-report duplicate cluster on Mission St; it is safe to re-run, and `npm run seed:clear` removes them.
+`npx convex dev` creates or selects a deployment, pushes the functions and prints the URL. Leave it running.
+```bash
+cd convex && npm run seed
+```
+This loads 7 demo reports, including a 3-report duplicate cluster on Mission St. It is safe to re-run and replaces only seed and rehearsal rows; `npm run seed:clear` removes them.
 
 **App (Expo, runs in Expo Go)**
 ```bash
 cd mobile && npm install
 npx expo start
 ```
-Put the Convex URL in `mobile/.env` as `EXPO_PUBLIC_CONVEX_URL`. Set `EXPO_PUBLIC_API_BASE_URL` to the API URL to use the real model and Claude; leave it unset to run on the contract examples (the app shows a **Mock data** badge). Scan the QR code with Expo Go, or press `i` for the iOS simulator. On venue Wi-Fi use `npx expo start --tunnel`.
+Put the Convex URL in `mobile/.env` as `EXPO_PUBLIC_CONVEX_URL`, and the API URL as `EXPO_PUBLIC_API_BASE_URL`. Without an API URL the app runs on the contract examples and shows a **Mock data** badge; it never switches to mock data on its own. Scan the QR code with Expo Go, or press `i` for the iOS simulator. On venue Wi-Fi use `npx expo start --tunnel`.
 
-**API (model, city data, Claude):** FastAPI in `serve/`; see [serve/README.md](serve/README.md).
+**API (model, city data, Claude):** FastAPI in `serve/` ([serve/README.md](serve/README.md)). `GET /health` reports `model_version` (`stub` until a trained model is loaded) and `report_ready` (whether Claude is configured).
 
 ## What is real and what is mocked
 | Part | Status |
 |---|---|
-| App flow, location provenance, timeouts and retries | Real |
+| App flow, location provenance, timeouts and retries | Real; tested on the iOS simulator |
 | Live map, duplicate clustering, audit fields | Real, on a Convex cloud deployment |
-| Map data shown in the demo | **Seeded**: 7 reports marked `model_version: demo-seed`, plus whatever is added live |
-| Classifier | Fine-tuned model in progress (`ml/`). Until it is behind the API, the API serves a stub, and the app can run on contract examples |
-| Duplicate check and fix times | Real DataSF queries in `serve/citydata.py` |
-| Claude report | `serve/claude_report.py`. When the app runs on mock data, the report is a fixed example |
+| Map data in the demo | **Seeded**: 7 reports marked `model_version: demo-seed`, shown as "Seeded demo report" on the pin card |
+| Classifier | Trained in `ml/`. Until the trained model is loaded, the API serves a **stub** classifier (`model_version: stub`) |
+| Duplicate check and fix times | DataSF queries in `serve/citydata.py`. Fix times may come from a cached evidence file |
+| Claude report | `serve/claude_report.py`. In mock mode the report is a fixed contract example, and map rows are marked `mock` |
 | Filing to SF 311 | Never. The app links to sf311.org; a person decides |
 
-**Accuracy:** read from `reports/final_eval.json` once the sealed test run is committed. No number here is typed by hand.
+**Accuracy:** read from `reports/final_eval.json` once the sealed test run is committed. No number in this README is typed by hand.
 
 ## Known limits
-- Tested on the iOS simulator in Expo Go. **Android and the camera have not been tested.**
-- The live map needs internet; the Convex write endpoint has no sign-in (fine for a demo, not for production).
-- Duplicate clusters on the map are computed over the latest 500 reports; city duplicates come from DataSF.
-- Locations typed by hand are accepted only inside San Francisco.
+- Tested in Expo Go on the iOS simulator only. **Android, the camera and a physical iPhone have not been tested.**
+- Add to map appears only after a report is written. If the report writer is down, the resident can retry, or file using the category and agency shown.
+- The live map needs internet, and the Convex save endpoint has no sign-in. That is fine for a demo, not for production.
+- Map clusters cover the latest 500 reports and only group the same category.
+- Typed addresses are accepted only inside San Francisco.
 - Encampment reports are framed as outreach requests. No photos of people appear anywhere in this project.
 
 ## Repository
 ```
 mobile/      Expo React Native app (iOS + Android)
 convex/      Convex schema, reports functions, duplicate clusters, demo seed
-serve/       FastAPI: /classify, /context, /report
+serve/       FastAPI: /classify, /context, /report, /health
 ml/          training and inference for the vision model
 eval/        metrics, calibration, Claude zero-shot baseline, the one final test eval
 contracts/   API schemas and the category ↔ agency map
