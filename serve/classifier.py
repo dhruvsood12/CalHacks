@@ -52,14 +52,15 @@ class ModelClassifier:
         if meta["classes"] != LABELS:
             raise ValueError("artifact class order != contracts/categories.json")
         self.model_version = meta["model_version"]
-        self.threshold = meta.get("abstain_threshold") or UNCALIBRATED_THRESHOLD
         self.geo = bool(meta.get("geo_prior_beta"))
 
     def classify(self, image_bytes, latlng=None):
         t0 = time.perf_counter()
         img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
         probs = self.predictor.probs([img], latlng=[latlng] if latlng else None)[0]
-        return _response(probs, self.threshold, self.model_version, self.geo and latlng is not None, t0)
+        _, threshold = self.predictor.calibration(with_location=latlng is not None)
+        return _response(probs, threshold or UNCALIBRATED_THRESHOLD, self.model_version,
+                         self.geo and latlng is not None, t0)
 
 
 def make_classifier():

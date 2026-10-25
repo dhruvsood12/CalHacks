@@ -98,3 +98,25 @@ def test_report_failure_is_503(client, monkeypatch):
     r = client.post("/report", json={"image_b64": "AAAA", "media_type": "image/jpeg", "classification": cls,
                                      "language": "en"})
     assert r.status_code == 503 and r.json()["error"] == "report_unavailable"
+
+
+def test_context_times_out_to_valid_empty(client, monkeypatch):
+    import time
+    import serve.app as appmod
+    monkeypatch.setattr(appmod, "CONTEXT_TIMEOUT_S", 0.2)
+    monkeypatch.setattr(sys.modules["serve.citydata"], "get_context", lambda label, lat, lng: time.sleep(2))
+    t0 = time.time()
+    r = client.get("/context", params={"label": "graffiti", "lat": 37.8, "lng": -122.4})
+    assert r.status_code == 200 and time.time() - t0 < 1.5
+    validate(r.json(), "context.response.schema.json")
+    assert r.json()["nearby_open"] == []
+
+
+def test_report_unexpected_error_is_503(client, monkeypatch):
+    def boom(body, context=None):
+        raise KeyError("prob")
+    monkeypatch.setattr(sys.modules["serve.claude_report"], "write_report", boom)
+    cls = client.post("/classify", files={"image": ("p.jpg", jpeg(), "image/jpeg")}).json()
+    r = client.post("/report", json={"image_b64": "AAAA", "media_type": "image/jpeg", "classification": cls,
+                                     "language": "en"})
+    assert r.status_code == 503

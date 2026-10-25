@@ -69,6 +69,16 @@ class Predictor:
         probs = torch.stack([self._member_logits(m, t, paths, batch).softmax(-1) for m, t in self.members]).mean(0)
         return probs.clamp_min(1e-12).log().numpy()
 
+    def calibration(self, with_location):
+        """(temperature, abstain_threshold) for this request. With the geo-prior on (beta > 0) but no
+        location, use the prior-free calibration B saves under val_metrics.no_geo_prior."""
+        beta = self.meta.get("geo_prior_beta") or 0.0
+        if beta and not with_location:
+            no_geo = (self.meta.get("val_metrics") or {}).get("no_geo_prior") or {}
+            if no_geo.get("temperature"):
+                return no_geo["temperature"], no_geo.get("abstain_threshold")
+        return self.meta.get("temperature") or 1.0, self.meta.get("abstain_threshold")
+
     def probs(self, paths, latlng=None, batch=64):
         z = torch.from_numpy(self.logits(paths, batch))
         beta = self.meta.get("geo_prior_beta") or 0.0
@@ -76,5 +86,5 @@ class Predictor:
             from ml.geoprior import log_lift
 
             z = z + beta * torch.from_numpy(np.stack([log_lift(lat, lng) for lat, lng in latlng])).float()
-        temperature = self.meta.get("temperature") or 1.0
+        temperature, _ = self.calibration(with_location=latlng is not None)
         return (z / temperature).softmax(-1).numpy()
