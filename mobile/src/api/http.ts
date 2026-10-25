@@ -1,10 +1,27 @@
 import { Api, Classification, CityContext, Report } from './types';
 
+const CLASSIFY_TIMEOUT_MS = 8_000;
+const CONTEXT_TIMEOUT_MS = 6_000;
 const REPORT_TIMEOUT_MS = 30_000;
+
+async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: number) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } catch (e) {
+    if (controller.signal.aborted) {
+      throw new Error(`The server didn't answer within ${timeoutMs / 1000} s.`);
+    }
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 async function readJson<T>(res: Response): Promise<T> {
   if (!res.ok) {
-    throw new Error(`${res.status} ${res.statusText}`);
+    throw new Error(`The server returned ${res.status} ${res.statusText}`.trim());
   }
   return (await res.json()) as T;
 }
@@ -20,7 +37,7 @@ export function httpApi(baseUrl: string): Api {
         form.append('lat', String(location.lat));
         form.append('lng', String(location.lng));
       }
-      const res = await fetch(`${base}/classify`, { method: 'POST', body: form });
+      const res = await fetchWithTimeout(`${base}/classify`, { method: 'POST', body: form }, CLASSIFY_TIMEOUT_MS);
       return readJson<Classification>(res);
     },
 
@@ -30,24 +47,21 @@ export function httpApi(baseUrl: string): Api {
         lat: String(location.lat),
         lng: String(location.lng),
       });
-      const res = await fetch(`${base}/context?${query.toString()}`);
+      const res = await fetchWithTimeout(`${base}/context?${query.toString()}`, {}, CONTEXT_TIMEOUT_MS);
       return readJson<CityContext>(res);
     },
 
     async report(request) {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), REPORT_TIMEOUT_MS);
-      try {
-        const res = await fetch(`${base}/report`, {
+      const res = await fetchWithTimeout(
+        `${base}/report`,
+        {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(request),
-          signal: controller.signal,
-        });
-        return await readJson<Report>(res);
-      } finally {
-        clearTimeout(timer);
-      }
+        },
+        REPORT_TIMEOUT_MS,
+      );
+      return readJson<Report>(res);
     },
   };
 }
