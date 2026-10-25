@@ -1,0 +1,549 @@
+{
+  "n": 4252,
+  "temperature": 0.939685418279746,
+  "top1": 0.7784571966133584,
+  "top3": 0.9047507055503292,
+  "macro_f1": 0.7772235106396221,
+  "nll": 0.8851344288938826,
+  "ece": 0.027137201767968886,
+  "ece_uncalibrated": 0.03850443180130268,
+  "aurc": 0.09865027650703931,
+  "per_class": {
+    "abandoned_vehicle": {
+      "precision": 0.757085020242915,
+      "recall": 0.7391304347826086,
+      "f1": 0.7479999999999999,
+      "support": 253
+    },
+    "blocked_sidewalk": {
+      "precision": 0.9144144144144144,
+      "recall": 0.7898832684824902,
+      "f1": 0.847599164926931,
+      "support": 257
+    },
+    "blocking_driveway": {
+      "precision": 0.7709090909090909,
+      "recall": 0.8379446640316206,
+      "f1": 0.803030303030303,
+      "support": 253
+    },
+    "curb_ramp_defect": {
+      "precision": 0.5645933014354066,
+      "recall": 0.4701195219123506,
+      "f1": 0.5130434782608695,
+      "support": 251
+    },
+    "encampment": {
+      "precision": 0.8255813953488372,
+      "recall": 0.8765432098765432,
+      "f1": 0.8502994011976048,
+      "support": 243
+    },
+    "garbage_debris": {
+      "precision": 0.6617100371747212,
+      "recall": 0.726530612244898,
+      "f1": 0.6926070038910507,
+      "support": 245
+    },
+    "graffiti": {
+      "precision": 0.7970479704797048,
+      "recall": 0.8605577689243028,
+      "f1": 0.8275862068965517,
+      "support": 251
+    },
+    "illegal_posting": {
+      "precision": 0.8530612244897959,
+      "recall": 0.842741935483871,
+      "f1": 0.8478701825557811,
+      "support": 248
+    },
+    "litter_receptacle": {
+      "precision": 0.8125,
+      "recall": 0.7647058823529411,
+      "f1": 0.787878787878788,
+      "support": 255
+    },
+    "parked_on_sidewalk": {
+      "precision": 0.8755020080321285,
+      "recall": 0.8650793650793651,
+      "f1": 0.8702594810379242,
+      "support": 252
+    },
+    "pavement_defect": {
+      "precision": 0.8589211618257261,
+      "recall": 0.8149606299212598,
+      "f1": 0.8363636363636363,
+      "support": 254
+    },
+    "sewer_flooding": {
+      "precision": 0.8306451612903226,
+      "recall": 0.8207171314741036,
+      "f1": 0.8256513026052105,
+      "support": 251
+    },
+    "sewer_vent_cover": {
+      "precision": 0.7943262411347518,
+      "recall": 0.8924302788844621,
+      "f1": 0.8405253283302064,
+      "support": 251
+    },
+    "sidewalk_defect": {
+      "precision": 0.5813953488372093,
+      "recall": 0.6,
+      "f1": 0.5905511811023623,
+      "support": 250
+    },
+    "streetlight": {
+      "precision": 0.8,
+      "recall": 0.8,
+      "f1": 0.8000000000000002,
+      "support": 240
+    },
+    "traffic_sign": {
+      "precision": 0.7641921397379913,
+      "recall": 0.6944444444444444,
+      "f1": 0.7276507276507277,
+      "support": 252
+    },
+    "tree_issue": {
+      "precision": 0.7695167286245354,
+      "recall": 0.8414634146341463,
+      "f1": 0.8038834951456311,
+      "support": 246
+    }
+  },
+  "confusion_matrix": [
+    [
+      187,
+      3,
+      29,
+      0,
+      7,
+      4,
+      0,
+      0,
+      2,
+      12,
+      2,
+      0,
+      0,
+      1,
+      1,
+      3,
+      2
+    ],
+    [
+      1,
+      203,
+      0,
+      6,
+      11,
+      11,
+      0,
+      2,
+      4,
+      4,
+      1,
+      0,
+      0,
+      2,
+      0,
+      5,
+      7
+    ],
+    [
+      25,
+      0,
+      212,
+      1,
+      0,
+      1,
+      0,
+      0,
+      0,
+      10,
+      0,
+      1,
+      0,
+      1,
+      1,
+      0,
+      1
+    ],
+    [
+      2,
+      1,
+      13,
+      118,
+      1,
+      5,
+      3,
+      3,
+      1,
+      2,
+      4,
+      9,
+      14,
+      51,
+      7,
+      8,
+      9
+    ],
+    [
+      6,
+      3,
+      0,
+      2,
+      213,
+      12,
+      0,
+      0,
+      2,
+      0,
+      1,
+      1,
+      0,
+      0,
+      2,
+      1,
+      0
+    ],
+    [
+      2,
+      1,
+      1,
+      5,
+      11,
+      178,
+      2,
+      1,
+      23,
+      0,
+      1,
+      4,
+      2,
+      7,
+      0,
+      0,
+      7
+    ],
+    [
+      1,
+      1,
+      0,
+      5,
+      0,
+      4,
+      216,
+      9,
+      2,
+      0,
+      0,
+      2,
+      2,
+      1,
+      0,
+      6,
+      2
+    ],
+    [
+      1,
+      1,
+      0,
+      1,
+      0,
+      0,
+      11,
+      209,
+      1,
+      1,
+      0,
+      1,
+      0,
+      0,
+      2,
+      17,
+      3
+    ],
+    [
+      2,
+      1,
+      1,
+      0,
+      7,
+      37,
+      5,
+      0,
+      195,
+      0,
+      1,
+      1,
+      0,
+      0,
+      3,
+      0,
+      2
+    ],
+    [
+      11,
+      1,
+      11,
+      1,
+      2,
+      3,
+      0,
+      0,
+      0,
+      218,
+      0,
+      0,
+      0,
+      0,
+      3,
+      1,
+      1
+    ],
+    [
+      2,
+      0,
+      0,
+      14,
+      0,
+      2,
+      1,
+      0,
+      0,
+      0,
+      207,
+      4,
+      3,
+      16,
+      3,
+      1,
+      1
+    ],
+    [
+      1,
+      1,
+      1,
+      2,
+      2,
+      1,
+      1,
+      4,
+      2,
+      0,
+      10,
+      206,
+      8,
+      5,
+      4,
+      0,
+      3
+    ],
+    [
+      0,
+      1,
+      0,
+      5,
+      0,
+      1,
+      3,
+      2,
+      0,
+      0,
+      1,
+      6,
+      224,
+      7,
+      0,
+      0,
+      1
+    ],
+    [
+      1,
+      1,
+      0,
+      26,
+      1,
+      4,
+      3,
+      2,
+      2,
+      0,
+      6,
+      7,
+      26,
+      150,
+      4,
+      1,
+      16
+    ],
+    [
+      2,
+      1,
+      3,
+      7,
+      1,
+      3,
+      4,
+      1,
+      2,
+      0,
+      3,
+      1,
+      1,
+      5,
+      192,
+      9,
+      5
+    ],
+    [
+      2,
+      2,
+      3,
+      12,
+      0,
+      2,
+      20,
+      12,
+      0,
+      2,
+      3,
+      2,
+      0,
+      2,
+      13,
+      175,
+      2
+    ],
+    [
+      1,
+      1,
+      1,
+      4,
+      2,
+      1,
+      2,
+      0,
+      4,
+      0,
+      1,
+      3,
+      2,
+      10,
+      5,
+      2,
+      207
+    ]
+  ],
+  "prior_weighted_top1": 0.7733782882190672,
+  "selective": {
+    "threshold": 0.8267940809222973,
+    "coverage": 0.6234713076199435,
+    "n_covered": 2651,
+    "n_correct": 2412,
+    "selective_accuracy": 0.9098453413806111,
+    "selective_accuracy_lower95": 0.9001680181000503
+  },
+  "ci95": {
+    "top1": [
+      0.7646626785771518,
+      0.7936595646775573
+    ],
+    "top3": [
+      0.8938487900500203,
+      0.9162532225460392
+    ],
+    "macro_f1": [
+      0.7617060481282298,
+      0.7910812505339989
+    ],
+    "aurc": [
+      0.08490744615764713,
+      0.11065644954543974
+    ],
+    "coverage": [
+      0.6046054307164002,
+      0.6407419612444615
+    ],
+    "selective_accuracy": [
+      0.8971703257133612,
+      0.9230494135799093
+    ]
+  },
+  "n_groups": 603,
+  "n_boot": 1000,
+  "run": "dinov2-square-lpft-default-s13",
+  "members": [
+    "dinov2-square-lpft-default-s13"
+  ],
+  "abstain_rule": {
+    "threshold": 0.8267940809222973,
+    "coverage": 0.6234713076199435,
+    "selective_accuracy": 0.9098453413806111,
+    "selective_accuracy_lower95": 0.9001680181000503,
+    "target": 0.9,
+    "alpha": 0.05,
+    "always_abstain": false
+  },
+  "source": "data/val.csv",
+  "timm_name": "vit_base_patch14_dinov2.lvd142m",
+  "top_confusions": [
+    {
+      "true": "curb_ramp_defect",
+      "pred": "sidewalk_defect",
+      "count": 51,
+      "share_of_true": 0.20318725099601595,
+      "examples": [
+        "images/curb_ramp_defect/101000839105.jpg",
+        "images/curb_ramp_defect/101000881352.jpg",
+        "images/curb_ramp_defect/101000894863.jpg"
+      ]
+    },
+    {
+      "true": "litter_receptacle",
+      "pred": "garbage_debris",
+      "count": 37,
+      "share_of_true": 0.1450980392156863,
+      "examples": [
+        "images/litter_receptacle/101000863360.jpg",
+        "images/litter_receptacle/101000864866.jpg",
+        "images/litter_receptacle/101000868950.jpg"
+      ]
+    },
+    {
+      "true": "abandoned_vehicle",
+      "pred": "blocking_driveway",
+      "count": 29,
+      "share_of_true": 0.11462450592885376,
+      "examples": [
+        "images/abandoned_vehicle/101000816063.jpg",
+        "images/abandoned_vehicle/101000876330.jpg",
+        "images/abandoned_vehicle/101000973150.jpg"
+      ]
+    },
+    {
+      "true": "sidewalk_defect",
+      "pred": "curb_ramp_defect",
+      "count": 26,
+      "share_of_true": 0.104,
+      "examples": [
+        "images/sidewalk_defect/101000833039.jpg",
+        "images/sidewalk_defect/101000856439.jpg",
+        "images/sidewalk_defect/101001055608.jpg"
+      ]
+    },
+    {
+      "true": "sidewalk_defect",
+      "pred": "sewer_vent_cover",
+      "count": 26,
+      "share_of_true": 0.104,
+      "examples": [
+        "images/sidewalk_defect/101000855421.jpg",
+        "images/sidewalk_defect/101000856147.jpg",
+        "images/sidewalk_defect/101000990979.jpg"
+      ]
+    }
+  ]
+}
