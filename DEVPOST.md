@@ -9,9 +9,8 @@ Paste-ready text for the Devpost form. Every number cites the committed file it 
 |---|---|---|
 | Video link | Upload the video and paste the URL (see "Video" below) | Dhruv |
 | Results | Only if `reports/final_eval.json` / `reports/claude_baseline.json` are committed before submitting; otherwise leave "Results" as written | Krishang |
-| Model bullets | Confirm which runs and ensemble are final | Nirvaan |
+| Model bullets | Confirm that `ens2-siglip2-dinov2-s13` (what the live API serves) is the final model | Nirvaan |
 | Vultr prize | Select only if the model or API actually runs on Vultr | Nirvaan |
-| Real-backend lines | Only if the real-backend run passes: switch "Accomplishments" and "Live evidence" to the in-app wording given there | Dhruv |
 
 ---
 
@@ -43,7 +42,7 @@ Reporting a pothole in San Francisco means finding the right category among doze
 - **Model (PyTorch, timm), Person A:**
   - frozen-feature probes on three backbones (SigLIP 2, DINOv2, ConvNeXt), each in square and 3:4 crops (`reports/probe_bakeoff.json`, PR #37)
   - then LP-FT fine-tuning (val table in PR #47); the final model or ensemble is chosen on val
-  - served by FastAPI (`/classify`, `/context`, `/report`, `/health`) over an HTTPS tunnel
+  - served by FastAPI (`/classify`, `/context`, `/report`, `/health`) over an HTTPS tunnel; the live API serves the ensemble `ens2-siglip2-dinov2-s13` (from `/health`)
 - **Evaluation and Claude (Python, Anthropic SDK), Person B:**
   - metrics with cluster-bootstrap confidence intervals, and calibration (temperature plus an abstain threshold with a Clopper–Pearson safety margin)
   - a Claude zero-shot baseline on the same test subset (PR #41, in review)
@@ -61,7 +60,7 @@ Reporting a pothole in San Francisco means finding the right category among doze
 - **A second opinion:** Claude sees the photo and the classifier's top 3, and can confirm, correct, or answer `not_a_311_issue`. The map records whether it agreed, so the decision stays auditable.
 - **Safety:** Claude flags immediate danger, and the app switches to Call 911 instead of a filing flow.
 - **Measured, not assumed:** we evaluate Claude zero-shot against the fine-tuned model on the same sealed test subset (`eval/`), rather than assuming either is better.
-- **Live evidence:** a live round trip through the report writer (`claude-opus-5-5`, 11.4 s, schema-valid, Spanish, using the city context) is in PR #40. *If the real-backend run passes, replace this with: "In the app, Claude wrote the report for our demo photo in <language>; see the video."*
+- **Live evidence:** in the app (iOS simulator, live API), Claude (`claude-opus-5-5`) wrote a schema-valid report in Spanish that described the photo and used the city's fix-time data ("unos 4 días"), with an English copy for the city.
 
 ## What makes it novel
 - **Location provenance as a first-class field:** every report says whether its location came from the photo, the phone or a typed address, and the map shows it.
@@ -77,7 +76,7 @@ Reporting a pothole in San Francisco means finding the right category among doze
 - **Cross-platform:** we moved from a planned SwiftUI app to Expo mid-hackathon, through a reviewed shared PR, so Android residents aren't left out.
 
 ## Accomplishments that we're proud of
-- An end-to-end flow from photo to location provenance, classification, duplicate check, report and live map, verified in one uninterrupted simulator run on a mock backend against cloud Convex. *If the real-backend iPhone run passes, replace with: "verified on an iPhone against the live model, city data and Claude".*
+- An end-to-end flow verified in one uninterrupted run in the iOS simulator against the live backend: location from the photo's GPS → the trained ensemble's top 3 (it said "not sure" on our synthetic test photo) → live city data → a Claude report in Spanish → Add to map → the live Convex map updated without a refresh. *If the iPhone run passes, add: "and on an iPhone".*
 - A live map whose every pin explains its routing.
 - A data split and evaluation designed so our numbers can't be inflated by leakage.
 
@@ -100,14 +99,18 @@ No accuracy numbers are reported yet. The final evaluation on the sealed test se
 
 ## Links
 - GitHub: https://github.com/dhruvsood12/CalHacks
-- Video: **(paste the YouTube URL)**. Use the real-backend recording if it was made. Otherwise upload `mock-backup-labelled.mp4` (2:02, every frame captioned "MOCK DATA · no model or Claude calls"), and start the description with: "Backup demo on a mock backend: classification, city context and the report are example data; no model or Claude call is made. The live map runs on Convex." 
+- Video: **(paste the YouTube URL)**. In order of preference:
+  1. A phone recording of the DEMO.md storyboard against the live API, with a real street photo.
+  2. `real-backend-sim-labelled.mp4` (2:51): the live model, city data and Claude, recorded in the iOS simulator with a synthetic test photo, and captioned "LIVE API · iOS simulator · synthetic test photo" on every frame.
+  3. `mock-backup-labelled.mp4` (2:02, captioned "MOCK DATA · no model or Claude calls"), starting the description with: "Backup demo on a mock backend: classification, city context and the report are example data; no model or Claude call is made. The live map runs on Convex." 
 
 ## Images (at least one is required)
-Upload in this order. These come from the latest build on the simulator with a mock backend, so keep the caption on each. If the real-backend run happens, replace them with phone screenshots and drop "(mock backend)".
-1. `devpost-1-location.png`: "Location fills itself in and says where it came from (mock backend)"
-2. `devpost-2-mock-report.png`: "Report step; in this backup the report is a labelled mock, no Claude call (mock backend)"
-3. `devpost-3-why-card.png`: "Live Convex map: agency, model vs resident pick, Claude agreement and location source for every pin (mock backend)"
-4. `devpost-4-map.png`: "Live map, colored by agency; duplicates within 75 m grouped with a count"
+Upload in this order. These are from the iOS simulator against the live API, using a synthetic test photo; keep "(simulator, synthetic test photo)" in each caption. Replace them with phone screenshots of a real street photo if you make that run.
+1. `devpost-1-location.png`: "Location fills itself in and says where it came from"
+2. `real-1-classify.png`: "The trained model's top 3; on our synthetic test photo it says 'not sure' and the resident picks (simulator, synthetic test photo)"
+3. `real-2-context.png`: "Live city data: open reports nearby and the typical fix time (simulator, synthetic test photo)"
+4. `real-3-claude-report.png`: "Claude's report in Spanish, with an English copy for the city (simulator, synthetic test photo)"
+5. `real-4-map-why.png`: "Live Convex map: agency, model vs resident pick, Claude agreement and location source for every pin (simulator)"
 
 ## Prize tracks to select
 | Track | Fit | Notes |

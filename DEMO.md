@@ -8,9 +8,15 @@
 **What has been verified so far (Oct 24, iPhone 17 Pro simulator, Expo Go, cloud Convex):**
 - **One uninterrupted run on the mock API,** screen-recorded: pick photo → "2001 Mission St · from the photo" → Español → Identify → "Not sure" → pick → Already reported? → Add mine as confirmation → Spanish report → Add to map → cluster badge **3 → 4** without a refresh → "why" card.
 - **On A's API (stub classifier, run locally) with B's `/context`:** the right photo uploaded, `/classify` and `/context` answered with live DataSF data, and the app handled `/report` failing.
-- **B ran a live Claude report** (`claude-opus-5-5`, 11.4 s, schema-valid) from a laptop (PR #40). It has not yet run through the app.
+- **Live API, end to end in the simulator** (screen-recorded, synthetic test photo):
+  - `/health` reported `model_version: ens2-siglip2-dinov2-s13` and `report_ready: true`.
+  - The trained ensemble returned pothole 26% with "Not sure" → pick pothole.
+  - Live `/context` returned "No open reports of this kind nearby" and a fix time of about 4 days (District 9).
+  - Claude wrote a schema-valid Spanish report that described the photo.
+  - Copy report put the English text on the clipboard.
+  - Add to map saved `model_version: ens2-siglip2-dinov2-s13`, and the cluster went 3 → 4 without a refresh.
 
-**Not yet verified:** the trained model behind the API, a real Claude report inside the app, and a physical iPhone. On-screen numbers in the mock (81%, "2 days ago, 38 m") change with the real API.
+**Not yet verified:** a physical iPhone, the camera, and a real street photo through the live model.
 
 ## Part 1: the 3-minute video
 Demo-first: about 2:15 of app, 30 s of how it works and why it matters, 15 s for the problem. Narration is 356 words, about 2:30 at 140–150 words a minute, leaving about 30 s for taps and loading.
@@ -31,8 +37,9 @@ Demo-first: about 2:15 of app, 30 s of how it works and why it matters, 15 s for
 **Cut list if over time:** drop Copy report (1:50) and the architecture card (keep only the narration). Never cut the map update.
 
 **Which video to submit:**
-- **Real backend:** record the storyboard above on the phone, and use that only if every check passes. `/health` shows a non-stub `model_version` and `report_ready: true`; then `/classify`, `/context`, a real Claude report, Add to map and a live map update all work on the phone.
-- **Otherwise:** submit `mock-backup-labelled.mp4` (2:02). It is `mock-backup.mp4` with the idle first 13 s trimmed and **"MOCK DATA · no model or Claude calls"** burned into every frame. It also shows the "Mock data" badge, a report titled "Mock report: … no Claude call was made", and the map card's "Mock data: no Claude call was made". Narrate it as a mock-backend backup, and say the live map runs on Convex.
+- **Best: a phone recording against the live API.** Record the storyboard above with a real street photo, and use it only if every check passes on the phone: `/health` non-stub with `report_ready: true`, then classify, context, a real Claude report, Add to map and a live map update.
+- **Next: `real-backend-sim-labelled.mp4` (2:51).** The same live API end to end in the iOS simulator, with a synthetic test photo, captioned "LIVE API · iOS simulator · synthetic test photo" on every frame. It's real model and Claude output; say on screen or in the narration that it's the simulator.
+- **Last resort:** `mock-backup-labelled.mp4` (2:02). It is `mock-backup.mp4` with the idle first 13 s trimmed and **"MOCK DATA · no model or Claude calls"** burned into every frame. It also shows the "Mock data" badge, a report titled "Mock report: … no Claude call was made", and the map card's "Mock data: no Claude call was made". Narrate it as a mock-backend backup, and say the live map runs on Convex.
 - `run1.mp4` is from an older build whose mock showed a canned Spanish report. Don't submit it.
 
 ## Part 2: recording checklist

@@ -53,18 +53,18 @@ Put the Convex URL in `mobile/.env` as `EXPO_PUBLIC_CONVEX_URL`, and the API URL
 ## What is real and what is mocked
 | Part | Status |
 |---|---|
-| App flow, location provenance, timeouts and retries | Real; tested on the iOS simulator |
+| App flow, location provenance, timeouts and retries | Real; tested in the iOS simulator against the live API |
 | Live map, duplicate clustering, audit fields | Real, on a Convex cloud deployment |
 | Map data in the demo | **Seeded**: 7 reports marked `model_version: demo-seed`, shown as "Seeded demo report" on the pin card |
-| Classifier | Trained in `ml/`. Until the trained model is loaded, the API serves a **stub** classifier (`model_version: stub`) |
+| Classifier | Trained in `ml/`. The live API serves the ensemble `ens2-siglip2-dinov2-s13` (from `/health`); without a model loaded the API serves a **stub** (`model_version: stub`) |
 | Duplicate check and fix times | DataSF queries in `serve/citydata.py`. Fix times may come from a cached evidence file |
-| Claude report | `serve/claude_report.py`. In mock mode the report is a labelled placeholder ("Mock data: no Claude call was made"), and map rows are marked `mock` |
+| Claude report | `serve/claude_report.py`, live: a schema-valid Spanish report was produced in the app. In mock mode the report is a labelled placeholder ("Mock data: no Claude call was made"), and map rows are marked `mock` |
 | Filing to SF 311 | Never. The app links to sf311.org; a person decides |
 
 **Accuracy:** read from `reports/final_eval.json` once the sealed test run is committed. No number in this README is typed by hand.
 
 ## Known limits
-- Tested in Expo Go on the iOS simulator only. **Android, the camera and a physical iPhone have not been tested.**
+- Tested in Expo Go on the iOS simulator only, against the live API with a synthetic test photo. **Android, the camera and a physical iPhone have not been tested**, and no accuracy is claimed until the sealed test results are committed.
 - Add to map appears only after a report is written. If the report writer is down, the resident can retry, or file using the category and agency shown.
 - The live map needs internet, and the Convex save endpoint has no sign-in. That is fine for a demo, not for production.
 - Map clusters cover the latest 500 reports and only group the same category.
