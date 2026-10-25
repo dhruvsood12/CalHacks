@@ -11,7 +11,7 @@ Three people work in parallel, each with their own Claude session, on one shared
 2. **Stay in your lane.**
    - **A** edits `ml/`, `serve/app.py`, `serve/classifier.py`, `serve/tests/` and `serve/requirements.txt`.
    - **B** edits `eval/`, `reports/`, `serve/claude_report.py`, `serve/citydata.py` and `serve/prompts/`.
-   - **C** edits `ios/` and `convex/`.
+   - **C** edits `mobile/` (Expo/React Native app, iOS + Android) and `convex/`.
    - Shared files (`contracts/`, `data/`, `scripts/`, `docs/`, `PLAN.md`, `CLAUDE.md`, `CONTRIBUTING.md`, `.github/`) change only in a PR labelled `shared`, approved by **both** other people.
 3. **The test set is sealed.**
    - Only B's `eval/final_eval.py` and `eval/claude_zeroshot.py` may read `data/test.csv` or `reports/claude_baseline_ids.csv`. A trains; B judges. The shared data tooling in `scripts/` is the one exception: it builds, audits and fetches the split, and changes to it need two approvals. CI enforces this.

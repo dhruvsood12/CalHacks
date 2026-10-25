@@ -26,7 +26,7 @@ This is the source of truth. If something here is wrong, fix it with a PR. Don't
   - **Location improves the prediction:** location *alone* predicts the category at 16.3% top-1 on held-out blocks, against 5.9% chance. That's a second signal to fuse with the image (§3.7).
   - **Accuracy is measured and calibrated, with "not sure".** SF311 publishes no accuracy.
   - **Any language** through Claude. SF311 offers 5 in the app.
-  - **iOS 17+.** SF311 v7 needs iOS 26.
+  - **iOS and Android** (one Expo/React Native app). SF311 v7 needs iOS 26.
   - **Head-to-head accuracy against SF311's own suggestion:** measured on the same val photos (team task). We claim "more accurate" only if that measurement says so.
 - **Measured and ruled out:** location does *not* improve agency routing. The nearest past report's agency scored 63.5% against 71.5% for the category's usual agency, so we don't claim it. `docs/evidence/location_signal.json`
 
@@ -186,9 +186,9 @@ Precedent for why this matters: random hold-outs on spatially autocorrelated ima
 ## 5. System architecture
 
 ```
- iPhone app (ios/, SwiftUI)                                   Convex (convex/)
+ Phone app (mobile/, Expo RN: iOS+Android)                    Convex (convex/)
    │ photo → JPEG ≤1280px, GPS, language                      ▲ reports table (no photos)
-   ▼                                                           │ live subscription → MapKit pins
+   ▼                                                           │ live query → map pins
  Inference API (serve/, FastAPI on the GPU box, HTTPS via cloudflared)
    ├── POST /classify ── ml/infer.py Predictor (A) + geo-prior (A, β from B) + calibration (B) → top-3, abstain
    ├── GET  /context ─── serve/citydata.py (B) → live DataSF: open same-type reports ≤75 m, typical fix time
@@ -209,8 +209,8 @@ The model is most of the work, so two people work on it, split the way serious M
 | | Owner | Lane | Builds | Hands off |
 |---|---|---|---|---|
 | **A: Training + API host** | Nirvaan (GPU + images) | `ml/`, `serve/app.py`, `serve/classifier.py`, `serve/tests/` | data pipeline, frozen probes, LP-FT on 3 backbones, recipe variants, ensemble, `ml/infer.py`, the **geo-prior table**, the API on the GPU box | `val_logits.npz` per run → B; the artifact → B; the API URL → C |
-| **B: Evaluation + Claude + city data** | *(fill in)* | `eval/`, `reports/`, `serve/claude_report.py`, `serve/citydata.py`, `serve/prompts/` | metrics with bootstrap CIs, the val decision tables, geo-prior β, calibration and abstain threshold, the `/context` city-data lookups, the Claude report writer, Claude zero-shot baseline, **the one test run**, model card | decision tables → A; calibrated artifact → A; numbers → C |
-| **C: iOS app + submission** | *(fill in)* | `ios/`, `convex/` | SwiftUI app, **automatic geotagging** (GPS / photo EXIF + address), the "already reported?" and fix-time cards, MapKit + Convex live map, languages, emergency and abstain UX, demo video, Devpost | the demo and the submission |
+| **B: Evaluation + Claude + city data** | Krishang (@krishang2006) | `eval/`, `reports/`, `serve/claude_report.py`, `serve/citydata.py`, `serve/prompts/` | metrics with bootstrap CIs, the val decision tables, geo-prior β, calibration and abstain threshold, the `/context` city-data lookups, the Claude report writer, Claude zero-shot baseline, **the one test run**, model card | decision tables → A; calibrated artifact → A; numbers → C |
+| **C: Mobile app + submission** | Dhruv (@dhruvsood12) | `mobile/`, `convex/` | Expo (React Native) app for iOS + Android, **automatic geotagging** (GPS / photo EXIF + address), the "already reported?" and fix-time cards, Convex live map, languages, emergency and abstain UX, demo video, Devpost | the demo and the submission |
 
 **Why not split the GPU work across three people?** With one GPU, training runs back to back no matter who launches them, and splitting the launches only adds coordination. What *can* run in parallel is everything around the GPU: evaluation, calibration, Claude, and the app. That's how the work is cut.
 - If B or C can get a **second GPU** (e.g. the Vultr credits from the MLH prize), the obvious use is running backbone 3 and the recipe variants in parallel on it. Same code, same configs.
@@ -254,7 +254,7 @@ Sleep in shifts after G3. Never leave the merge queue without an owner.
 | **Cal Hacks Best People-First Social Impact** | Language access to city services. Fewer misrouted reports. | C |
 | **Cal Hacks Most Technically Complex** | Three fine-tuned backbones, an ensemble, calibrated selective prediction, a spatial-leakage-proof evaluation | A + B |
 | **Cal Hacks overall (1st–3rd)** | Mapped to the judging criteria below | all |
-| **[Convex] Best use of Convex** | **Only if** the live map really runs on Convex live subscriptions (`ConvexMobile`) | C |
+| **[Convex] Best use of Convex** | **Only if** the live map really runs on Convex live queries (Convex React client `useQuery`) | C |
 | **[MLH] Best Use of Vultr** | **Only if** a GPU or the API actually runs on Vultr | A |
 | **[Microsoft] Built for the Real World** | Real city data, real routing, honest evaluation | C |
 
@@ -286,7 +286,7 @@ C confirms the Anthropic prize's eligibility rules (Hive / Slack #ask-directors)
 
 ## 10. Open decisions (settle at G0 in the "G0: team decisions" issue)
 
-1. **Who is B and who is C?** Plus GitHub handles for `.github/CODEOWNERS`.
+1. ~~Who is B and who is C?~~ **Decided:** B = Krishang (@krishang2006), C = Dhruv (@dhruvsood12). C builds in Expo/React Native so the app also runs on Android (Nirvaan's call).
 2. **GPU model and memory.** This sets batch size and whether all three backbones plus variants fit before G3.
 3. **Who has an iOS 26 iPhone** for the SF311 head-to-head (about 20–40 val photos through SF311's photo suggestion; **never press submit**)?
 4. **Keep the `encampment` class?** Recommendation: keep it in the model (it's real 311 volume, and dropping it would misroute those photos) and apply the §9 guardrails. Dropping it costs nothing if decided before G2.

@@ -1,34 +1,35 @@
-# Role C: iOS app, live map, demo and submission (owner: fill in)
+# Role C: Mobile app (iOS + Android), live map, demo and submission (owner: Dhruv, @dhruvsood12)
 
 Paste this into your Claude session along with `PLAN.md` and `CLAUDE.md`.
 
-**Your lane:** `ios/` (the Xcode project) and `convex/` (the Convex backend functions).
+**Your lane:** `mobile/` (the Expo / React Native app) and `convex/` (the Convex backend functions).
 
-You build the only thing judges touch: a native iPhone app. After feature freeze (G4) you lead the video and the Devpost submission, with A and B supplying their sections.
+You build the only thing judges touch: a phone app that runs on **iOS and Android** from one codebase. (Expo was chosen over SwiftUI so it also works on Android.) After feature freeze (G4) you lead the video and the Devpost submission, with A and B supplying their sections.
 
 ## Stack
-- **SwiftUI**, iOS 17+.
-  - Photos: `PhotosPicker` plus the camera (`UIImagePickerController` wrapped for SwiftUI, or AVFoundation).
-  - Location: `CoreLocation`. Map: **MapKit**.
-- **Networking:** `URLSession`.
-  - `POST /classify` sends multipart field `image` (a JPEG, long side ≤ 1280px). Resize with UIKit first; that also converts HEIC.
+- **Expo (React Native) + TypeScript.**
+  - Photos: `expo-image-picker` for camera + library. Request `exif: true`, so library photos keep their GPS.
+  - Location: `expo-location`.
+  - Resize to JPEG with long side ≤ 1280px using `expo-image-manipulator`. That also converts HEIC.
+- **Networking:** `fetch`.
+  - `POST /classify` sends multipart field `image` + optional `lat`/`lng`.
+  - `GET /context?label=&lat=&lng=`
   - `POST /report` sends JSON.
-  - Shapes: `contracts/*.schema.json`. Mirror them as `Codable` structs.
-- **Live map backend:** Convex with the Swift client.
-  - Package `https://github.com/convex/convex-swift`, product **`ConvexMobile`**.
-  - `convex.subscribe(to:yielding:)` returns a Combine publisher that updates live.
-  - Mutations are `async`.
-  - Functions live in `convex/` (TypeScript): run `npx convex dev` with your own Convex login. The deployment URL goes in a gitignored config.
-- **Don't wait for the API.** From minute one, bundle `contracts/examples/*.json` as a `MockAPI` that returns them. Switch to the real base URL (A's HTTPS tunnel) with one setting. **iOS App Transport Security needs HTTPS.** The cloudflared URL is HTTPS.
-- **Running on a real iPhone:** Xcode + a free Apple ID (Personal Team) can install on your own device; trust the developer profile on the phone. TestFlight needs a paid account and review, so skip it. Also have the simulator flow working as a backup.
+  - Shapes: `contracts/*.schema.json`. Mirror them as TypeScript types.
+- **Live map backend:** Convex.
+  - Functions in `convex/`.
+  - The app uses the Convex React client (`useQuery` updates live, `useMutation` saves).
+  - The deployment URL goes in config, not hard-coded.
+- **Don't wait for the API.** Bundle `contracts/examples/*.json` as a mock that returns them, and switch to A's HTTPS tunnel URL with one setting.
+- **Running on phones:** Expo Go or a development build on a real iPhone and a real Android phone, with a simulator/emulator as backup.
 
 ## Screens
 1. **Capture, with automatic geotagging:**
    - Camera / photo library.
    - **Location with zero taps:**
-     - Camera photos use `CLLocationManager`, requested once at capture, with accuracy shown.
-     - **Library photos use the photo's own location** (`PHAsset.location`; needs photo-library read access, since `PhotosPicker` alone strips it).
-   - Reverse-geocode with `CLGeocoder`: "📍 3601 Lyon St (±8 m)". Tap to adjust on a map.
+     - Camera photos use `expo-location`, requested once at capture, with accuracy shown.
+     - **Library photos use the photo's own EXIF GPS** (`exif: true` in `expo-image-picker`).
+   - Reverse-geocode (`expo-location` `reverseGeocodeAsync`): "📍 3601 Lyon St (±8 m)". Tap to adjust on a map.
    - **Manual pin only as a fallback.** That's a direct contrast with SF311, which makes the resident place a pin.
    - Language picker. Default to the device language; offer at least English, Español, 中文, Filipino, Tiếng Việt, Русский.
 2. **Result:**
@@ -42,14 +43,14 @@ You build the only thing judges touch: a native iPhone app. After feature freeze
    - Then `/report`: a loading state, then Claude's title, description and next steps in the user's language, with an expandable English copy.
    - **If `emergency` is true:** a full-width "Call 911" banner with a `tel:911` link, and no filing flow.
    - Buttons: **Copy report**, **Open sf311.org** (`https://sf311.org`), and **Add to map**. We never auto-submit to the city.
-3. **Live map (MapKit):**
+3. **Live map:**
    - Convex subscription to `reports:listRecent`, with pins colored by category, appearing live.
    - `reports:save` mutation stores the category, display name, agency, lat/lng, language, `title_en`, confidence and created time. **No photo.**
 4. **About:** how it works, plus the results card. **Every number is loaded from `reports/*.json`** (bundled at G4), never typed by hand.
 
 ## Steps
 - **C0 (by G0, 19:15):**
-  - Xcode project in `ios/` (with a `.gitignore` for `xcuserdata/`, `DerivedData/`, `*.xcuserstate`), and a `convex/` init.
+  - Expo project in `mobile/` and a `convex/` init.
   - Confirm the **Anthropic "Claude for Public Benefit" prize rules** and the **Devpost video length limit** in Hive or Slack #ask-directors, and post both in team chat.
 - **C1 (by G1, 20:00):** the capture screen plus `MockAPI` result screen on the simulator.
 - **C2 (by G2, 23:00):** the real `/classify`, `/context` and `/report` against A's tunnel, on a physical iPhone. **Automatic geotagging** (GPS + photo EXIF + address). Already-reported card. Fix-time line. Language picker. Abstain UX. Emergency banner.

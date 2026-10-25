@@ -11,9 +11,10 @@
 /PLAN.md        @nirvaansomany @dhruvsood12
 /CLAUDE.md      @nirvaansomany @dhruvsood12
 /CONTRIBUTING.md @nirvaansomany @dhruvsood12
-# Fill in once roles are confirmed at G0 (PLAN §10.3):
-# /eval/                    @<B-handle>
-# /reports/                 @<B-handle>
-# /serve/claude_report.py   @<B-handle>
-# /ios/                     @<C-handle>
-# /convex/                  @<C-handle>
+/eval/                    @krishang2006
+/reports/                 @krishang2006
+/serve/claude_report.py   @krishang2006
+/serve/citydata.py        @krishang2006
+/serve/prompts/           @krishang2006
+/mobile/                  @dhruvsood12
+/convex/                  @dhruvsood12

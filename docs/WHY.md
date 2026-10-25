@@ -54,7 +54,7 @@ The 50 m match is a *possible* duplicate: two tags on one block can be different
 | **Expected fix time** | Not shown | No | From the city's own close times, per category (and per district where there's enough data) |
 | **Location** | Place a pin | Varies | **Zero taps:** GPS at capture, or the photo's own EXIF location for library photos, plus the nearest address |
 | **Uses location to classify** | Unknown | No | **Geo-prior**: image × location, with the weight tuned on val (location alone is 16.3% vs 5.9% chance) |
-| **Phones supported** | iOS 26+ for v7 | — | iOS 17+ |
+| **Phones supported** | iOS 26+ for v7 | — | iOS and Android (one Expo app) |
 | **Portable to other cities** | No | Yes, but unmeasured | The pipeline needs only a city's public 311 data with photos: scrape → spatial split → fine-tune → evaluate. |
 
 **What we can't claim:**

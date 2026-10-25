@@ -18,7 +18,7 @@ scripts/     scrape, split, leakage audit, image fetch, repo guardrails
 ml/          A: probes, LP-FT training of 3 backbones, inference library
 serve/       A hosts FastAPI /classify + /report; B owns the Claude report writer
 eval/        B: metrics, calibration, Claude zero-shot baseline, the one final test eval
-ios/         C: SwiftUI iPhone app
+mobile/      C: Expo (React Native) app for iOS + Android
 convex/      C: Convex functions behind the live map
 reports/     every number we cite, plus the test-set ledger
 ```
