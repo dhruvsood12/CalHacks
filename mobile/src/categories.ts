@@ -22,6 +22,8 @@ export const AUTHORITIES: Authority[] = [
   { key: 'OTHER', name: 'Other (incl. Healthy Streets)', short: 'Other', color: colors.authorityOther },
 ];
 
+export const AUTHORITY_COUNT = AUTHORITIES.length;
+
 export function authorityOf(agency: string): Authority {
   const prefix = agency.split(' - ')[0];
   return AUTHORITIES.find((authority) => authority.key === prefix) ?? AUTHORITIES[AUTHORITIES.length - 1];
