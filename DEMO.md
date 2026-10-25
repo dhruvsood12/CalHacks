@@ -30,9 +30,10 @@ Demo-first: about 2:15 of app, 30 s of how it works and why it matters, 15 s for
 
 **Cut list if over time:** drop Copy report (1:50) and the architecture card (keep only the narration). Never cut the map update.
 
-**Backup footage (mock API, simulator):** use these only labelled as a backup or rehearsal. Never present them as a real model or Claude result.
-- `mock-backup.mp4` (2:15) is on the latest build. It shows the "Mock data" badge, a report titled "Mock report: … no Claude call was made", and a map card whose Claude row reads "Mock data: no Claude call was made".
-- `run1.mp4` (3:21) is from an older build whose mock showed a canned Spanish example report. Prefer `mock-backup.mp4`.
+**Which video to submit:**
+- **Real backend:** record the storyboard above on the phone, and use that only if every check passes. `/health` shows a non-stub `model_version` and `report_ready: true`; then `/classify`, `/context`, a real Claude report, Add to map and a live map update all work on the phone.
+- **Otherwise:** submit `mock-backup-labelled.mp4` (2:02). It is `mock-backup.mp4` with the idle first 13 s trimmed and **"MOCK DATA · no model or Claude calls"** burned into every frame. It also shows the "Mock data" badge, a report titled "Mock report: … no Claude call was made", and the map card's "Mock data: no Claude call was made". Narrate it as a mock-backend backup, and say the live map runs on Convex.
+- `run1.mp4` is from an older build whose mock showed a canned Spanish report. Don't submit it.
 
 ## Part 2: recording checklist
 - [ ] `curl -s https://<tunnel>/health` shows a real `model_version` (not `stub`) and `report_ready: true`. If not, record on mock and say so on screen.

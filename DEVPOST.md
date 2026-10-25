@@ -1,13 +1,22 @@
 # Devpost draft: Snap311
 
-Paste-ready text for the Devpost form. Fields marked **TODO** must be filled or confirmed before submitting. Every number cites the committed file it comes from.
+Paste-ready text for the Devpost form. Every number cites the committed file it comes from.
 
-**Not submitted yet.** Submit only after the TODOs are resolved; the deadline is Sun Oct 25, 9:00 AM PDT (team target 7:45).
+**Not submitted yet.** Deadline Sun Oct 25, 9:00 AM PDT; team target 7:45.
+
+**Still missing before submitting** (everything else below is final):
+| Field | Missing | Who |
+|---|---|---|
+| Video link | Upload the video and paste the URL (see "Video" below) | Dhruv |
+| Results | Only if `reports/final_eval.json` / `reports/claude_baseline.json` are committed before submitting; otherwise leave "Results" as written | Krishang |
+| Model bullets | Confirm which runs and ensemble are final | Nirvaan |
+| Vultr prize | Select only if the model or API actually runs on Vultr | Nirvaan |
+| Real-backend lines | Only if the real-backend run passes: switch "Accomplishments" and "Live evidence" to the in-app wording given there | Dhruv |
 
 ---
 
 ## Project name
-**Snap311** (**TODO:** confirm; PLAN §10 lists the product name as an open decision)
+**Snap311**
 
 ## Tagline (≤ 200 chars)
 Photograph a San Francisco street problem: Snap311 finds the location, names the problem and agency, checks for duplicates, and Claude writes the report in your language.
@@ -35,7 +44,6 @@ Reporting a pothole in San Francisco means finding the right category among doze
   - frozen-feature probes on three backbones (SigLIP 2, DINOv2, ConvNeXt), each in square and 3:4 crops (`reports/probe_bakeoff.json`, PR #37)
   - then LP-FT fine-tuning (val table in PR #47); the final model or ensemble is chosen on val
   - served by FastAPI (`/classify`, `/context`, `/report`, `/health`) over an HTTPS tunnel
-  - **TODO (A):** confirm which runs and ensemble are final
 - **Evaluation and Claude (Python, Anthropic SDK), Person B:**
   - metrics with cluster-bootstrap confidence intervals, and calibration (temperature plus an abstain threshold with a Clopper–Pearson safety margin)
   - a Claude zero-shot baseline on the same test subset (PR #41, in review)
@@ -52,8 +60,8 @@ Reporting a pothole in San Francisco means finding the right category among doze
 - **Language access:** the report exists in the resident's language and in English because Claude writes both, grounded in the photo, the category, the location and the city context.
 - **A second opinion:** Claude sees the photo and the classifier's top 3, and can confirm, correct, or answer `not_a_311_issue`. The map records whether it agreed, so the decision stays auditable.
 - **Safety:** Claude flags immediate danger, and the app switches to Call 911 instead of a filing flow.
-- **Measured, not assumed:** we evaluate Claude zero-shot against the fine-tuned model on the same sealed test subset (`eval/`), rather than assuming either is better. **TODO:** add results only from `reports/claude_baseline.json` if committed.
-- **Live evidence:** a live round trip through the report writer (`claude-opus-5-5`, 11.4 s, schema-valid, Spanish, using the city context) is in PR #40. **TODO:** replace with the in-app result once the full path runs.
+- **Measured, not assumed:** we evaluate Claude zero-shot against the fine-tuned model on the same sealed test subset (`eval/`), rather than assuming either is better.
+- **Live evidence:** a live round trip through the report writer (`claude-opus-5-5`, 11.4 s, schema-valid, Spanish, using the city context) is in PR #40. *If the real-backend run passes, replace this with: "In the app, Claude wrote the report for our demo photo in <language>; see the video."*
 
 ## What makes it novel
 - **Location provenance as a first-class field:** every report says whether its location came from the photo, the phone or a typed address, and the map shows it.
@@ -69,7 +77,7 @@ Reporting a pothole in San Francisco means finding the right category among doze
 - **Cross-platform:** we moved from a planned SwiftUI app to Expo mid-hackathon, through a reviewed shared PR, so Android residents aren't left out.
 
 ## Accomplishments that we're proud of
-- An end-to-end flow from photo to location provenance, classification, duplicate check, report and live map, verified in one uninterrupted simulator run against cloud Convex. **TODO:** upgrade to "on a phone against the real API" once done.
+- An end-to-end flow from photo to location provenance, classification, duplicate check, report and live map, verified in one uninterrupted simulator run on a mock backend against cloud Convex. *If the real-backend iPhone run passes, replace with: "verified on an iPhone against the live model, city data and Claude".*
 - A live map whose every pin explains its routing.
 - A data split and evaluation designed so our numbers can't be inflated by leakage.
 
@@ -78,7 +86,7 @@ Reporting a pothole in San Francisco means finding the right category among doze
 - Contracts frozen early let three people build in parallel without blocking each other.
 
 ## What's next for Snap311
-- **TODO:** results slide from `reports/final_eval.json`.
+- Publishing the sealed test-set results once the final evaluation runs.
 - On-device classification (Core ML), so the photo never leaves the phone for that step.
 - Sign-in and rate limits on the map's write endpoint before any public use.
 - The same pipeline for any city with open 311 photo data: scrape, spatial split, fine-tune, evaluate.
@@ -87,17 +95,19 @@ Reporting a pothole in San Francisco means finding the right category among doze
 ## Built with
 `expo` · `react-native` · `typescript` · `convex` · `python` · `pytorch` · `timm` · `fastapi` · `anthropic` · `claude` · `datasf` · `cloudflare`
 
+## Results
+No accuracy numbers are reported yet. The final evaluation on the sealed test set hasn't been committed (`reports/final_eval.json`), so we make no performance claims.
+
 ## Links
 - GitHub: https://github.com/dhruvsood12/CalHacks
-- Video: **TODO** (YouTube, public or unlisted, ≤ 3:00)
+- Video: **(paste the YouTube URL)**. Use the real-backend recording if it was made. Otherwise upload `mock-backup-labelled.mp4` (2:02, every frame captioned "MOCK DATA · no model or Claude calls"), and start the description with: "Backup demo on a mock backend: classification, city context and the report are example data; no model or Claude call is made. The live map runs on Convex." 
 
 ## Images (at least one is required)
-Use real-API screenshots if available. Otherwise use these and **caption them as "mock API"**, since they show the "Mock data" badge or a mock report. They are on branch `c/pr-evidence`, folder `pr-evidence/`:
-1. `c1-capture.png`: capture with location provenance
-2. `d-run-picked.png`: "2001 Mission St (±8 m) · from the photo"
-3. `c1-context-report.png`: Already reported? card plus report (mock)
-4. `d-run-map-4.png`: live map, cluster badge 4
-5. `d-run-why-card.png`: the "Why this agency" card
+Upload in this order. These come from the latest build on the simulator with a mock backend, so keep the caption on each. If the real-backend run happens, replace them with phone screenshots and drop "(mock backend)".
+1. `devpost-1-location.png`: "Location fills itself in and says where it came from (mock backend)"
+2. `devpost-2-mock-report.png`: "Report step; in this backup the report is a labelled mock, no Claude call (mock backend)"
+3. `devpost-3-why-card.png`: "Live Convex map: agency, model vs resident pick, Claude agreement and location source for every pin (mock backend)"
+4. `devpost-4-map.png`: "Live map, colored by agency; duplicates within 75 m grouped with a count"
 
 ## Prize tracks to select
 | Track | Fit | Notes |
@@ -108,11 +118,13 @@ Use real-API screenshots if available. Otherwise use these and **caption them as
 | Cal Hacks Most Technically Complex | Good | Three backbones, LP-FT, calibration, spatial leakage controls |
 | Cal Hacks Overall | Yes | |
 | [Microsoft] Built for the Real World | Weak | They ask for a "production-minded AI agent"; only select if the team agrees |
-| [MLH] Best Use of Vultr | Only if true | **TODO:** select only if the model or API actually runs on Vultr |
+| [MLH] Best Use of Vultr | Unconfirmed | Don't select unless Nirvaan confirms the model or API runs on Vultr |
 
 ## Team
 - Dhruv Sood (@dhruvsood12): mobile app, live map (Convex), demo, submission
-- Nirvaan (@nirvaansomany): data pipeline, model training, inference API (**TODO:** full name)
-- Krishang (@krishang2006): evaluation, calibration, Claude report writer, city data (**TODO:** full name)
+- Nirvaan Somany (@nirvaansomany): data pipeline, model training, inference API
+- Krishang Khandelwal (@krishang2006): evaluation, calibration, Claude report writer, city data
+
+Names are taken from the git commit author names and Krishang's GitHub profile.
 
 All three must be added as teammates on the Devpost submission.
