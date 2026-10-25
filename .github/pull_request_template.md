@@ -4,7 +4,7 @@
 ## Lane
 - [ ] A: `ml/`, `serve/app.py`, `serve/classifier.py`, `serve/tests/`
 - [ ] B: `eval/`, `reports/`, `serve/claude_report.py`, `serve/prompts/`
-- [ ] C: `ios/`, `convex/`
+- [ ] C: `mobile/`, `convex/`
 - [ ] **Touches shared files** (`contracts/`, `data/`, `scripts/`, `PLAN.md`, `CLAUDE.md`, `CONTRIBUTING.md`, `.github/`), so it's labelled `shared` and needs 2 approvals
 
 ## Evidence it works
