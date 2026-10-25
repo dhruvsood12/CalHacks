@@ -1,9 +1,9 @@
 import { File } from 'expo-file-system';
 import { Api, Classification, CityContext, Report } from './types';
 
-const CLASSIFY_TIMEOUT_MS = 8_000;
-const CONTEXT_TIMEOUT_MS = 6_000;
-const REPORT_TIMEOUT_MS = 30_000;
+const CLASSIFY_TIMEOUT_MS = 10_000;
+const CONTEXT_TIMEOUT_MS = 9_000;
+const REPORT_TIMEOUT_MS = 45_000;
 
 async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: number) {
   const controller = new AbortController();
