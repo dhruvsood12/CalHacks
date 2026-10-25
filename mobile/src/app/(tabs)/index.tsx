@@ -4,7 +4,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { LANGUAGES, deviceLanguage } from '../../languages';
-import { GeoFix, describeFix, locateHere } from '../../location';
+import { GeoFix, describeFix, locateHere, photoLocation } from '../../location';
 import { colors } from '../../theme';
 
 type LocationState =
@@ -14,7 +14,8 @@ type LocationState =
   | { kind: 'failed' }
   | { kind: 'ready'; fix: GeoFix };
 
-const PICKER_OPTIONS: ImagePicker.ImagePickerOptions = { mediaTypes: ['images'], quality: 0.9 };
+const CAMERA_OPTIONS: ImagePicker.ImagePickerOptions = { mediaTypes: ['images'], quality: 0.9 };
+const LIBRARY_OPTIONS: ImagePicker.ImagePickerOptions = { ...CAMERA_OPTIONS, exif: true };
 
 function locationText(state: LocationState) {
   switch (state.kind) {
@@ -37,9 +38,14 @@ export default function CaptureScreen() {
   const [language, setLanguage] = useState(deviceLanguage);
   const [note, setNote] = useState('');
 
-  async function locate() {
+  async function locate(asset: ImagePicker.ImagePickerAsset | null) {
     setLocation({ kind: 'locating' });
     try {
+      const fromPhoto = asset ? await photoLocation(asset.exif) : null;
+      if (fromPhoto) {
+        setLocation({ kind: 'ready', fix: fromPhoto });
+        return;
+      }
       const fix = await locateHere();
       setLocation(fix === 'denied' ? { kind: 'denied' } : { kind: 'ready', fix });
     } catch {
@@ -54,10 +60,10 @@ export default function CaptureScreen() {
       return;
     }
     try {
-      const result = await ImagePicker.launchCameraAsync(PICKER_OPTIONS);
+      const result = await ImagePicker.launchCameraAsync(CAMERA_OPTIONS);
       if (!result.canceled) {
         setPhoto(result.assets[0]);
-        locate();
+        locate(null);
       }
     } catch {
       Alert.alert('Camera unavailable', 'Choose a photo from your library instead.');
@@ -65,10 +71,10 @@ export default function CaptureScreen() {
   }
 
   async function choosePhoto() {
-    const result = await ImagePicker.launchImageLibraryAsync(PICKER_OPTIONS);
+    const result = await ImagePicker.launchImageLibraryAsync(LIBRARY_OPTIONS);
     if (!result.canceled) {
       setPhoto(result.assets[0]);
-      locate();
+      locate(result.assets[0]);
     }
   }
 
