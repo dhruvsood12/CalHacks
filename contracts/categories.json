@@ -1,0 +1,160 @@
+{
+  "version": 1,
+  "note": "Index order == model output order. Frozen at G1; changes need all three owners.",
+  "classes": [
+    {
+      "index": 0,
+      "label": "abandoned_vehicle",
+      "display_name": "Abandoned vehicle",
+      "primary_agency": "MTA - Abandoned Vehicles Work",
+      "sf311_filter": "service_name='Parking Enforcement' AND service_subtype='abandoned_vehicle'",
+      "real_photo_volume": 12833,
+      "real_prior": 0.01979
+    },
+    {
+      "index": 1,
+      "label": "blocked_sidewalk",
+      "display_name": "Blocked sidewalk",
+      "primary_agency": "MTA - Access/Mobility Services Received",
+      "sf311_filter": "service_name='Blocked Street and Sidewalk'",
+      "real_photo_volume": 24293,
+      "real_prior": 0.03746
+    },
+    {
+      "index": 2,
+      "label": "blocking_driveway",
+      "display_name": "Car blocking a driveway",
+      "primary_agency": "MTA - Parking Enforcement Dispatch",
+      "sf311_filter": "service_name='Parking Enforcement' AND service_subtype in ('blocking_driveway_cite_only','blocking_driveway_cite_tow')",
+      "real_photo_volume": 40598,
+      "real_prior": 0.06261
+    },
+    {
+      "index": 3,
+      "label": "curb_ramp_defect",
+      "display_name": "Damaged curb or curb ramp",
+      "primary_agency": "PW - Street Use and Mapping",
+      "sf311_filter": "service_name='Sidewalk and Curb' AND service_subtype='curb_or_curb_ramp_defect'",
+      "real_photo_volume": 3183,
+      "real_prior": 0.00491
+    },
+    {
+      "index": 4,
+      "label": "encampment",
+      "display_name": "Encampment (request outreach)",
+      "primary_agency": "Healthy Streets Operation Center",
+      "sf311_filter": "service_name='Encampment'",
+      "real_photo_volume": 40933,
+      "real_prior": 0.06313
+    },
+    {
+      "index": 5,
+      "label": "garbage_debris",
+      "display_name": "Dumped garbage or debris",
+      "primary_agency": "PW - Street and Environmental Services",
+      "sf311_filter": "service_name='Street and Sidewalk Cleaning' AND service_subtype='garbage_and_debris'",
+      "real_photo_volume": 340220,
+      "real_prior": 0.52469
+    },
+    {
+      "index": 6,
+      "label": "graffiti",
+      "display_name": "Graffiti",
+      "primary_agency": "PW - Street and Environmental Services",
+      "sf311_filter": "service_name in ('Graffiti Public','Graffiti Private')",
+      "real_photo_volume": 86137,
+      "real_prior": 0.13284
+    },
+    {
+      "index": 7,
+      "label": "illegal_posting",
+      "display_name": "Illegal posting or flyer",
+      "primary_agency": "PW - Street and Environmental Services",
+      "sf311_filter": "service_name='Illegal Postings'",
+      "real_photo_volume": 7192,
+      "real_prior": 0.01109
+    },
+    {
+      "index": 8,
+      "label": "litter_receptacle",
+      "display_name": "Public trash can problem",
+      "primary_agency": "PW - Street and Environmental Services",
+      "sf311_filter": "service_name='Litter Receptacle Maintenance'",
+      "real_photo_volume": 9808,
+      "real_prior": 0.01513
+    },
+    {
+      "index": 9,
+      "label": "parked_on_sidewalk",
+      "display_name": "Car parked on the sidewalk",
+      "primary_agency": "MTA - Parking Enforcement Dispatch",
+      "sf311_filter": "service_name='Parking Enforcement' AND service_subtype='parking_on_sidewalk'",
+      "real_photo_volume": 32514,
+      "real_prior": 0.05014
+    },
+    {
+      "index": 10,
+      "label": "pavement_defect",
+      "display_name": "Pothole or street pavement damage",
+      "primary_agency": "PW - Street and Sewer Repair",
+      "sf311_filter": "service_name='Sidewalk and Curb' AND service_subtype='pavement_defect'",
+      "real_photo_volume": 3823,
+      "real_prior": 0.0059
+    },
+    {
+      "index": 11,
+      "label": "sewer_flooding",
+      "display_name": "Sewer problem, leak or flooding",
+      "primary_agency": "PUC - Sewer Ops",
+      "sf311_filter": "service_name='Sewer'",
+      "real_photo_volume": 6387,
+      "real_prior": 0.00985
+    },
+    {
+      "index": 12,
+      "label": "sewer_vent_cover",
+      "display_name": "Missing or damaged sewer vent cover",
+      "primary_agency": "PW - Street Use and Mapping",
+      "sf311_filter": "service_name='Sidewalk and Curb' AND service_subtype in ('missing_side_sewer_vent_cover','damaged_side_sewer_vent_cover')",
+      "real_photo_volume": 2912,
+      "real_prior": 0.00449
+    },
+    {
+      "index": 13,
+      "label": "sidewalk_defect",
+      "display_name": "Damaged sidewalk",
+      "primary_agency": "PW - Street Use and Mapping",
+      "sf311_filter": "service_name='Sidewalk and Curb' AND service_subtype='sidewalk_defect'",
+      "real_photo_volume": 9850,
+      "real_prior": 0.01519
+    },
+    {
+      "index": 14,
+      "label": "streetlight",
+      "display_name": "Streetlight out or damaged",
+      "primary_agency": "PUC - Streetlights",
+      "sf311_filter": "service_name='Streetlights'",
+      "real_photo_volume": 4252,
+      "real_prior": 0.00656
+    },
+    {
+      "index": 15,
+      "label": "traffic_sign",
+      "display_name": "Damaged or missing traffic sign",
+      "primary_agency": "MTA - Sign Shop",
+      "sf311_filter": "service_name in ('MTA Parking Traffic Signs Normal Priority','MTA Parking Traffic Signs High Priority')",
+      "real_photo_volume": 11010,
+      "real_prior": 0.01698
+    },
+    {
+      "index": 16,
+      "label": "tree_issue",
+      "display_name": "Tree problem",
+      "primary_agency": "PW - Street and Environmental Services",
+      "sf311_filter": "service_name='Tree Maintenance'",
+      "real_photo_volume": 12474,
+      "real_prior": 0.01924
+    }
+  ],
+  "real_volume_note": "Photo reports with a direct image, 2024-10-01 to 2026-10-01, per class filter (DataSF, counted 2026-10-24). Use as the deployment prior."
+}

@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "POST /classify response",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["model_version", "top_k", "abstain", "abstain_threshold", "latency_ms"],
+  "properties": {
+    "model_version": {"type": "string", "description": "From model_meta.json, or 'stub' for the stub classifier"},
+    "top_k": {
+      "type": "array", "minItems": 3, "maxItems": 3,
+      "description": "Sorted by prob, descending. Calibrated (temperature-scaled) probabilities.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["label", "display_name", "agency", "prob"],
+        "properties": {
+          "label": {"type": "string", "description": "One of contracts/categories.json labels"},
+          "display_name": {"type": "string"},
+          "agency": {"type": "string", "description": "primary_agency from categories.json"},
+          "prob": {"type": "number", "minimum": 0, "maximum": 1}
+        }
+      }
+    },
+    "abstain": {"type": "boolean", "description": "true when top_k[0].prob < abstain_threshold"},
+    "abstain_threshold": {"type": "number", "minimum": 0, "maximum": 1},
+    "latency_ms": {"type": "number", "minimum": 0}
+  }
+}

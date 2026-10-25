@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "model_meta.json shipped next to model.pt (A -> B)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["model_version", "timm_name", "timm_kwargs", "img_size", "mean", "std", "classes",
+               "temperature", "abstain_threshold", "val_metrics", "train_git_sha", "split_manifest_sha256"],
+  "properties": {
+    "model_version": {"type": "string", "description": "e.g. siglip2b16-384-lpft-s13-<shortsha>"},
+    "timm_name": {"type": "string"},
+    "timm_kwargs": {"type": "object", "description": "Extra kwargs for timm.create_model, e.g. {\"img_size\": 448}"},
+    "img_size": {"type": "integer", "description": "Square side. Preprocess: resize short side -> center crop square. Never pad."},
+    "mean": {"type": "array", "items": {"type": "number"}, "minItems": 3, "maxItems": 3},
+    "std": {"type": "array", "items": {"type": "number"}, "minItems": 3, "maxItems": 3},
+    "classes": {"type": "array", "items": {"type": "string"}, "minItems": 17, "maxItems": 17,
+                "description": "Must equal the label order in contracts/categories.json"},
+    "temperature": {"type": "number", "exclusiveMinimum": 0},
+    "abstain_threshold": {"type": "number", "minimum": 0, "maximum": 1},
+    "val_metrics": {"type": "object", "description": "top1, top3, macro_f1, coverage_at_threshold, acc_at_threshold"},
+    "train_git_sha": {"type": "string"},
+    "split_manifest_sha256": {"type": "object", "description": "Copy of SPLIT_MANIFEST.json 'files'"}
+  }
+}

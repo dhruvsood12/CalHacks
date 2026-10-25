@@ -1,0 +1,14 @@
+# Review routing. Add the third teammate's GitHub handle where marked once known (PLAN §10.3).
+# Default: someone other than the author reviews; shared files need both others.
+/ml/            @nirvaansomany
+/reports/       @nirvaansomany
+/contracts/     @nirvaansomany @dhruvsood12
+/data/          @nirvaansomany @dhruvsood12
+/scripts/       @nirvaansomany @dhruvsood12
+/.github/       @nirvaansomany @dhruvsood12
+/PLAN.md        @nirvaansomany @dhruvsood12
+/CLAUDE.md      @nirvaansomany @dhruvsood12
+/CONTRIBUTING.md @nirvaansomany @dhruvsood12
+# Fill in once roles are confirmed at G0 (PLAN §10.3):
+# /serve/        @<B-handle>
+# /app/          @<C-handle>

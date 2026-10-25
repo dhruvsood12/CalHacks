@@ -1,0 +1,416 @@
+{
+  "classes": [
+    "abandoned_vehicle",
+    "blocked_sidewalk",
+    "blocking_driveway",
+    "curb_ramp_defect",
+    "encampment",
+    "garbage_debris",
+    "graffiti",
+    "illegal_posting",
+    "litter_receptacle",
+    "parked_on_sidewalk",
+    "pavement_defect",
+    "sewer_flooding",
+    "sewer_vent_cover",
+    "sidewalk_defect",
+    "streetlight",
+    "traffic_sign",
+    "tree_issue"
+  ],
+  "soql_filter": {
+    "garbage_debris": "service_name='Street and Sidewalk Cleaning' AND service_subtype='garbage_and_debris'",
+    "graffiti": "service_name in ('Graffiti Public','Graffiti Private')",
+    "encampment": "service_name='Encampment'",
+    "parked_on_sidewalk": "service_name='Parking Enforcement' AND service_subtype='parking_on_sidewalk'",
+    "blocking_driveway": "service_name='Parking Enforcement' AND service_subtype in ('blocking_driveway_cite_only','blocking_driveway_cite_tow')",
+    "abandoned_vehicle": "service_name='Parking Enforcement' AND service_subtype='abandoned_vehicle'",
+    "blocked_sidewalk": "service_name='Blocked Street and Sidewalk'",
+    "sidewalk_defect": "service_name='Sidewalk and Curb' AND service_subtype='sidewalk_defect'",
+    "pavement_defect": "service_name='Sidewalk and Curb' AND service_subtype='pavement_defect'",
+    "curb_ramp_defect": "service_name='Sidewalk and Curb' AND service_subtype='curb_or_curb_ramp_defect'",
+    "sewer_vent_cover": "service_name='Sidewalk and Curb' AND service_subtype in ('missing_side_sewer_vent_cover','damaged_side_sewer_vent_cover')",
+    "tree_issue": "service_name='Tree Maintenance'",
+    "illegal_posting": "service_name='Illegal Postings'",
+    "litter_receptacle": "service_name='Litter Receptacle Maintenance'",
+    "streetlight": "service_name='Streetlights'",
+    "sewer_flooding": "service_name='Sewer'",
+    "traffic_sign": "service_name in ('MTA Parking Traffic Signs Normal Priority','MTA Parking Traffic Signs High Priority')"
+  },
+  "top_agencies": {
+    "abandoned_vehicle": [
+      [
+        "MTA - Abandoned Vehicles Work",
+        1770
+      ],
+      [
+        "MTA - Parking Enforcement",
+        13
+      ],
+      [
+        "RPD - PSA",
+        8
+      ],
+      [
+        "311 - Supervisor",
+        7
+      ],
+      [
+        "RPD - Park Service Area 1",
+        1
+      ]
+    ],
+    "blocked_sidewalk": [
+      [
+        "MTA - Access/Mobility Services Received",
+        1435
+      ],
+      [
+        "PW - Street Use and Mapping",
+        199
+      ],
+      [
+        "PW - Street and Environmental Services",
+        90
+      ],
+      [
+        "311 - Supervisor",
+        15
+      ],
+      [
+        "Recology - Abandoned",
+        13
+      ]
+    ],
+    "blocking_driveway": [
+      [
+        "MTA - Parking Enforcement Dispatch",
+        1783
+      ],
+      [
+        "MTA - Parking Enforcement",
+        7
+      ],
+      [
+        "Police - Homeless Concerns",
+        5
+      ],
+      [
+        "RPD - PSA",
+        3
+      ],
+      [
+        "MTA - Abandoned Vehicles Work",
+        1
+      ]
+    ],
+    "curb_ramp_defect": [
+      [
+        "PW - Street Use and Mapping",
+        1237
+      ],
+      [
+        "MTA - Paint Shop",
+        144
+      ],
+      [
+        "PW - Street and Environmental Services",
+        78
+      ],
+      [
+        "311 - Supervisor",
+        43
+      ],
+      [
+        "MTA - Color Curb",
+        39
+      ]
+    ],
+    "encampment": [
+      [
+        "Healthy Streets Operation Center",
+        976
+      ],
+      [
+        "Healthy Streets Operation Center - Individual",
+        459
+      ],
+      [
+        "Duplicate Case Hold",
+        204
+      ],
+      [
+        "PW - Street and Environmental Services",
+        92
+      ],
+      [
+        "RPD - Park Patrol",
+        19
+      ]
+    ],
+    "garbage_debris": [
+      [
+        "PW - Street and Environmental Services",
+        901
+      ],
+      [
+        "Recology - Abandoned",
+        661
+      ],
+      [
+        "Recology - Overflowing",
+        106
+      ],
+      [
+        "CBD - Tenderloin",
+        65
+      ],
+      [
+        "CBD - SoMa West",
+        10
+      ]
+    ],
+    "graffiti": [
+      [
+        "PW - Street and Environmental Services",
+        1199
+      ],
+      [
+        "US Postal Service Maintenance",
+        127
+      ],
+      [
+        "ATT - Graffiti",
+        88
+      ],
+      [
+        "311 - Supervisor",
+        62
+      ],
+      [
+        "Clear Channel - Transit",
+        49
+      ]
+    ],
+    "illegal_posting": [
+      [
+        "PW - Street and Environmental Services",
+        1603
+      ],
+      [
+        "311 - Supervisor",
+        48
+      ],
+      [
+        "PW - Street Use and Mapping",
+        39
+      ],
+      [
+        "MTA - Sign Shop",
+        27
+      ],
+      [
+        "RPD - GGP",
+        24
+      ]
+    ],
+    "litter_receptacle": [
+      [
+        "PW - Street and Environmental Services",
+        852
+      ],
+      [
+        "Recology - Litter",
+        580
+      ],
+      [
+        "Recology - Abandoned",
+        214
+      ],
+      [
+        "Recology - Overflowing",
+        53
+      ],
+      [
+        "Clear Channel - Transit",
+        25
+      ]
+    ],
+    "parked_on_sidewalk": [
+      [
+        "MTA - Parking Enforcement Dispatch",
+        1781
+      ],
+      [
+        "Police - Homeless Concerns",
+        6
+      ],
+      [
+        "MTA - Parking Enforcement",
+        5
+      ],
+      [
+        "RPD - PSA",
+        4
+      ],
+      [
+        "MTA - Abandoned Vehicles Work",
+        3
+      ]
+    ],
+    "pavement_defect": [
+      [
+        "PW - Street and Sewer Repair",
+        1068
+      ],
+      [
+        "PW - Street Use and Mapping",
+        328
+      ],
+      [
+        "PW - Street and Environmental Services",
+        157
+      ],
+      [
+        "PUC - Sewer Ops",
+        53
+      ],
+      [
+        "MTA - Muni Feedback Received",
+        38
+      ]
+    ],
+    "sewer_flooding": [
+      [
+        "PUC - Sewer Ops",
+        527
+      ],
+      [
+        "PW - Street and Environmental Services",
+        493
+      ],
+      [
+        "PUC - Water",
+        204
+      ],
+      [
+        "Fire Hydrant Maintenance",
+        174
+      ],
+      [
+        "311 - Supervisor",
+        91
+      ]
+    ],
+    "sewer_vent_cover": [
+      [
+        "PW - Street Use and Mapping",
+        1694
+      ],
+      [
+        "PW - Street and Environmental Services",
+        23
+      ],
+      [
+        "PUC - Sewer Ops",
+        23
+      ],
+      [
+        "311 - Supervisor",
+        12
+      ],
+      [
+        "PUC - Water",
+        8
+      ]
+    ],
+    "sidewalk_defect": [
+      [
+        "PW - Street Use and Mapping",
+        1592
+      ],
+      [
+        "PW - Street and Environmental Services",
+        64
+      ],
+      [
+        "PW - Urban Forestry",
+        31
+      ],
+      [
+        "311 - Supervisor",
+        25
+      ],
+      [
+        "Port Authority",
+        10
+      ]
+    ],
+    "streetlight": [
+      [
+        "PUC - Streetlights",
+        1047
+      ],
+      [
+        "PGE - Streetlights",
+        355
+      ],
+      [
+        "311 - Supervisor",
+        123
+      ],
+      [
+        "MTA - Traffic Signal",
+        52
+      ],
+      [
+        "MTA - Muni Feedback Received",
+        39
+      ]
+    ],
+    "traffic_sign": [
+      [
+        "MTA - Sign Shop",
+        1168
+      ],
+      [
+        "MTA - Sign Shop High Priority",
+        151
+      ],
+      [
+        "311 - Supervisor",
+        81
+      ],
+      [
+        "MTA - Parking Meter Shop",
+        80
+      ],
+      [
+        "MTA - Traffic Signal",
+        62
+      ]
+    ],
+    "tree_issue": [
+      [
+        "PW - Street and Environmental Services",
+        1286
+      ],
+      [
+        "PW - Urban Forestry",
+        445
+      ],
+      [
+        "311 - Supervisor",
+        20
+      ],
+      [
+        "RPD - TMA",
+        9
+      ],
+      [
+        "RPD - GGP",
+        8
+      ]
+    ]
+  }
+}

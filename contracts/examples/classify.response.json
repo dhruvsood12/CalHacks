@@ -1,0 +1,11 @@
+{
+  "model_version": "stub",
+  "top_k": [
+    {"label": "pavement_defect", "display_name": "Pothole or street pavement damage", "agency": "PW - Street and Sewer Repair", "prob": 0.81},
+    {"label": "sidewalk_defect", "display_name": "Damaged sidewalk", "agency": "PW - Street Use and Mapping", "prob": 0.11},
+    {"label": "curb_ramp_defect", "display_name": "Damaged curb or curb ramp", "agency": "PW - Street Use and Mapping", "prob": 0.04}
+  ],
+  "abstain": false,
+  "abstain_threshold": 0.55,
+  "latency_ms": 41.0
+}
