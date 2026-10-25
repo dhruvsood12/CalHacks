@@ -52,7 +52,8 @@ def main() -> int:
     ap.add_argument("--target", type=float, default=0.90)
     ap.add_argument("--n-boot", type=int, default=1000)
     ap.add_argument("--report", type=Path, default=ROOT / "reports" / "val_metrics.json")
-    ap.add_argument("--force", action="store_true", help="allow member count != number of logits files")
+    ap.add_argument("--logits-from-predictor", action="store_true",
+                    help="the val logits were produced by ml.infer.Predictor (so they include tta_hflip if set)")
     args = ap.parse_args()
 
     meta_path = args.artifact / "model_meta.json"
@@ -60,13 +61,22 @@ def main() -> int:
     names = M.class_labels()
     if meta["classes"] != names:
         raise SystemExit("model_meta.classes != contracts/categories.json label order")
-    if len(meta["members"]) != len(args.val_logits) and not args.force:
-        raise SystemExit(f"{len(meta['members'])} members but {len(args.val_logits)} logits files (use --force to override)")
+    if len(meta["members"]) != len(args.val_logits):
+        raise SystemExit(f"{len(meta['members'])} members but {len(args.val_logits)} logits files: pass one per member, in order")
+    if meta.get("tta_hflip") and not args.logits_from_predictor:
+        raise SystemExit("model_meta.tta_hflip is true but train.py's val_logits.npz has no flip; "
+                         "produce val logits with ml.infer.Predictor and pass --logits-from-predictor")
 
     val = load_val()
     labels = val["label_idx"].to_numpy()
     groups = val["group"].to_numpy()
     members = [load_run(p, val) for p in args.val_logits]
+    for i, (m, p) in enumerate(zip(members, args.val_logits)):
+        want = meta["members"][i].get("run")
+        if want and m[0] != want:
+            raise SystemExit(f"{p}: run {m[0]!r} != model_meta.members[{i}].run {want!r}")
+        if m[1] and m[1] != meta["members"][i]["timm_name"]:
+            raise SystemExit(f"{p}: timm_name {m[1]!r} != model_meta.members[{i}].timm_name")
     logits = members[0][2] if len(members) == 1 else M.ensemble_logits([m[2] for m in members])
 
     # --- B2d: geo-prior beta on val -------------------------------------------------------
@@ -106,11 +116,21 @@ def main() -> int:
                       "val_cell_coverage": cell_cov, "sweep": beta_table},
         "source": "data/val.csv",
     })
-    if L is not None:
-        s["without_geo_prior"] = M.summarize(logits - beta * L, labels, temperature=M.fit_temperature(logits - beta * L, labels),
-                                             labels_names=names) | {"note": "same members, beta=0, own temperature"}
-        s["without_geo_prior"].pop("confusion_matrix", None)
-        s["without_geo_prior"].pop("per_class", None)
+    # --- no-location calibration: when the phone sends no lat/lng the prior is not applied, so
+    # ml/infer.py + serve/classifier.py use val_metrics.no_geo_prior.{temperature, abstain_threshold}
+    if L is not None and beta:
+        base = logits - beta * L
+        T0 = M.fit_temperature(base, labels)
+        rule0 = M.abstain_threshold(M.softmax(base, T0), labels, target=args.target)
+        s0 = M.summarize(base, labels, temperature=T0, threshold=rule0["threshold"], labels_names=names)
+        for k in ("confusion_matrix", "per_class"):
+            s0.pop(k, None)
+        s["without_geo_prior"] = s0 | {"abstain_rule": rule0, "note": "same members, beta=0, own temperature + threshold"}
+    else:
+        T0, rule0 = T, rule
+
+    def _r(x):
+        return None if x is None else round(float(x), 6)
 
     sel = s["selective"]
     meta["temperature"] = round(T, 6)
@@ -118,16 +138,23 @@ def main() -> int:
     meta["val_metrics"] = {
         "top1": round(s["top1"], 6), "top3": round(s["top3"], 6), "macro_f1": round(s["macro_f1"], 6),
         "ece": round(s["ece"], 6), "aurc": round(s["aurc"], 6),
-        "coverage_at_threshold": round(sel["coverage"], 6), "acc_at_threshold": round(sel["selective_accuracy"], 6),
-        "acc_at_threshold_lower95": round(sel["selective_accuracy_lower95"], 6),
+        "coverage_at_threshold": round(sel["coverage"], 6), "acc_at_threshold": _r(sel["selective_accuracy"]),
+        "acc_at_threshold_lower95": _r(sel["selective_accuracy_lower95"]),
+        "always_abstain": bool(rule["always_abstain"]),
         "geo_prior_beta": beta, "calibrated_on": "data/val.csv", "n_val": int(len(labels)),
+        "no_geo_prior": {"temperature": round(T0, 6), "abstain_threshold": round(rule0["threshold"], 6),
+                         "coverage_at_threshold": _r(rule0["coverage"]), "acc_at_threshold": _r(rule0["selective_accuracy"]),
+                         "always_abstain": bool(rule0["always_abstain"])},
     }
     schema_props = json.loads(SCHEMA.read_text(encoding="utf-8")).get("properties", {})
     if "geo_prior_beta" in schema_props:
         meta["geo_prior_beta"] = beta
     elif args.geoprior:
-        print("NOTE: contracts/model_meta.schema.json has no `geo_prior_beta` yet; wrote it under val_metrics. "
-              "A6's shared PR should add the top-level field; ml/infer.py can read either.", file=sys.stderr)
+        print("NOTE: contracts/model_meta.schema.json has no top-level `geo_prior_beta` (added by #42); until it "
+              "lands, ml/infer.py will not apply the prior. beta is recorded under val_metrics only.", file=sys.stderr)
+    if rule["always_abstain"]:
+        print(f"WARNING: no threshold reaches selective accuracy >= {args.target} on val; abstain_threshold=1.0 "
+              f"means the model always abstains (val_metrics.always_abstain=true).", file=sys.stderr)
     errors = validate_meta(meta)
     if errors:
         raise SystemExit("model_meta.json would not validate:\n  " + "\n  ".join(errors))
@@ -142,8 +169,13 @@ def main() -> int:
     print(f"  macro-F1           {s['macro_f1']:.4f}  [{ci['macro_f1'][0]:.4f}, {ci['macro_f1'][1]:.4f}]")
     print(f"  top-1 / top-3      {s['top1']:.4f} / {s['top3']:.4f}")
     print(f"  AURC               {s['aurc']:.4f}  [{ci['aurc'][0]:.4f}, {ci['aurc'][1]:.4f}]")
-    print(f"  abstain threshold  {tau:.4f}  -> coverage {sel['coverage']:.1%}, selective acc {sel['selective_accuracy']:.4f} "
-          f"(lower-95% {sel['selective_accuracy_lower95']:.4f} >= {args.target})")
+    if rule["always_abstain"]:
+        print(f"  abstain threshold  1.0 (ALWAYS ABSTAIN: target {args.target} unreachable on val)")
+    else:
+        print(f"  abstain threshold  {tau:.4f}  -> coverage {sel['coverage']:.1%}, selective acc {sel['selective_accuracy']:.4f} "
+              f"(lower-95% {sel['selective_accuracy_lower95']:.4f} >= {args.target})")
+    if L is not None and beta:
+        print(f"  no-location        T {T0:.4f}, threshold {rule0['threshold']:.4f} -> coverage {rule0['coverage']:.1%}")
     print(f"  wrote {meta_path} and {args.report}")
     return 0
 

@@ -203,12 +203,48 @@ def abstain_threshold(probs: np.ndarray, labels: np.ndarray, target: float = 0.9
     lower = np.array([clopper_pearson_lower(int(cum_k[i]), int(cum_n[i]), alpha) for i in idx])
     ok = np.nonzero(lower >= target)[0]
     if len(ok) == 0:
-        return {"threshold": 1.0, "coverage": 0.0, "selective_accuracy": float("nan"),
-                "selective_accuracy_lower95": float("nan"), "target": target, "alpha": alpha}
+        # No threshold reaches the target. `always_abstain` is the explicit signal; the threshold
+        # 1.0 with the strict "max_prob < threshold" rule still abstains on everything but p == 1.
+        return {"threshold": 1.0, "coverage": 0.0, "selective_accuracy": None,
+                "selective_accuracy_lower95": None, "target": target, "alpha": alpha, "always_abstain": True}
     i = idx[ok[-1]]  # largest prefix (= smallest threshold) that still meets the bound
     return {"threshold": float(conf_s[i]), "coverage": float(cum_n[i] / len(labels)),
             "selective_accuracy": float(cum_k[i] / cum_n[i]),
-            "selective_accuracy_lower95": float(lower[ok[-1]]), "target": target, "alpha": alpha}
+            "selective_accuracy_lower95": float(lower[ok[-1]]), "target": target, "alpha": alpha,
+            "always_abstain": False}
+
+
+# ----------------------------------------------------------------------------
+# Predictions that may be "no answer" (Claude refusals / unparseable output): preds == -1
+# ----------------------------------------------------------------------------
+NO_ANSWER = -1
+
+
+def confusion_matrix_na(preds: np.ndarray, labels: np.ndarray, n_classes: int = N_CLASSES) -> np.ndarray:
+    """(n_classes, n_classes + 1): the last column is 'no answer'. Nothing is ever credited to a real class."""
+    preds, labels = np.asarray(preds), np.asarray(labels)
+    p = np.where(preds < 0, n_classes, preds)
+    cm = np.bincount(labels * (n_classes + 1) + p, minlength=n_classes * (n_classes + 1))
+    return cm.reshape(n_classes, n_classes + 1)
+
+
+def macro_f1_na(preds: np.ndarray, labels: np.ndarray, n_classes: int = N_CLASSES) -> float:
+    """Macro-F1 over the real classes when some predictions are NO_ANSWER (they count as wrong
+    for their true class and as a false positive for nobody)."""
+    cm = confusion_matrix_na(preds, labels, n_classes).astype(np.float64)
+    tp = np.diag(cm[:, :n_classes])
+    pred_n = cm[:, :n_classes].sum(axis=0)
+    true_n = cm.sum(axis=1)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        precision = np.where(pred_n > 0, tp / pred_n, 0.0)
+        recall = np.where(true_n > 0, tp / true_n, 0.0)
+        f1 = np.where(precision + recall > 0, 2 * precision * recall / (precision + recall), 0.0)
+    return float(f1.mean())
+
+
+def top1_na(preds: np.ndarray, labels: np.ndarray) -> float:
+    preds, labels = np.asarray(preds), np.asarray(labels)
+    return float(((preds >= 0) & (preds == labels)).mean())
 
 
 # ----------------------------------------------------------------------------

@@ -101,7 +101,8 @@ def score(name: str, logits: np.ndarray, val: pd.DataFrame, n_boot: int, out_dir
     T = M.fit_temperature(logits, labels)
     probs_T = M.softmax(logits, T)
     thr = M.abstain_threshold(probs_T, labels, target=0.90)
-    s = M.summarize(logits, labels, groups=groups, temperature=T, threshold=thr["threshold"],
+    s = M.summarize(logits, labels, groups=groups, temperature=T,
+                    threshold=None if thr["always_abstain"] else thr["threshold"],
                     prior=M.real_prior(), n_boot=n_boot, labels_names=names)
     s["run"] = name
     s["members"] = members or [name]
