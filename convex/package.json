@@ -4,7 +4,9 @@
   "scripts": {
     "dev": "convex dev",
     "codegen": "convex codegen",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "seed": "convex run seed:demo",
+    "seed:clear": "convex run seed:clear"
   },
   "dependencies": {
     "convex": "^1.48.0"
