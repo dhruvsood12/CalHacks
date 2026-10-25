@@ -1,3 +1,5 @@
+export const NOTE_LIMIT = 500;
+
 export type Candidate = {
   label: string;
   display_name: string;
