@@ -34,7 +34,12 @@
         0.5,
         0.5,
         0.5
-      ]
+      ],
+      "input_wh": [
+        384,
+        384
+      ],
+      "crop_mode": "square"
     }
   ],
   "temperature": null,
