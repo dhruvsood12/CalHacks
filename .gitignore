@@ -1,0 +1,27 @@
+# data that never goes in git
+data/images/
+data/contact_sheet.jpg
+artifacts/
+runs/
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.onnx
+*.npz
+*.pkl
+
+# secrets
+.env
+.env.*
+!.env.example
+
+# python / node
+.venv/
+__pycache__/
+*.pyc
+node_modules/
+dist/
+.vite/
+.DS_Store
+*.log
