@@ -7,9 +7,11 @@
   within_circle(point, lat, lng, 75 m), status Open, filed in the last 30 days. distance_m is
   computed here; the 5 newest are returned. 5 s timeout; on any failure nearby_open = [].
 - **Fix time:** median and p75 days-to-close per class over the last 12 months citywide, plus a
-  per-supervisor-district version where n >= 30. Computed on first use and cached in
-  serve/cache/fix_times.json (gitignored). Falls back to docs/evidence/city_context_stats.json
-  if DataSF is unreachable, so the flow never blocks.
+  per-supervisor-district version where n >= 30, cached in serve/cache/fix_times.json (gitignored,
+  24 h TTL). **Requests never query for it:** `get_context` reads the cache (stale is fine), falls
+  back to docs/evidence/city_context_stats.json, and refreshes a missing/stale class in a background
+  thread. `warm_cache()` (A's app calls it at startup) or `--warm` fills all 17 classes in ~10 s.
+- Times: DataSF timestamps are naive Pacific; all "now" comparisons use America/Los_Angeles.
 - **Address:** the nearest city-record address within 40 m, any category.
 - Read-only. Never calls any SF 311 write endpoint.
 
@@ -97,8 +99,12 @@ def _parse_ts(s: str | None) -> datetime | None:
 
 
 def _now() -> datetime:
-    # DataSF timestamps are local (Pacific) naive strings; compare in the same frame.
-    return datetime.now()
+    """DataSF timestamps are naive Pacific local times; compare in the same frame whatever the box's TZ."""
+    try:
+        from zoneinfo import ZoneInfo
+        return datetime.now(ZoneInfo("America/Los_Angeles")).replace(tzinfo=None)
+    except Exception:  # no tz database (rare): fall back to system local time
+        return datetime.now()
 
 
 def haversine_m(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
@@ -248,22 +254,56 @@ def _evidence_fallback(label: str) -> dict[str, Any] | None:
             "n": int(ev["new_reports"]), "scope": "citywide, 2025-06 sample (cached evidence)"}
 
 
-def fix_time(label: str, district: str | None = None, allow_network: bool = True) -> dict[str, Any] | None:
-    """Contract `fix_time` object for the label (district version when available), or None."""
+_inflight: set[str] = set()
+
+
+def _refresh(label: str) -> dict[str, Any] | None:
+    """Compute and cache the fix times for one label (network). Returns the entry or None."""
+    try:
+        entry = compute_fix_times(label)
+    except Exception:
+        return None
+    with _lock:
+        cache = _load_cache()
+        cache[label] = entry
+        _save_cache(cache)
+    return entry
+
+
+def _refresh_async(label: str) -> None:
+    """Kick off one background refresh per label; never blocks the caller."""
+    with _lock:
+        if label in _inflight:
+            return
+        _inflight.add(label)
+
+    def run():
+        try:
+            _refresh(label)
+        finally:
+            with _lock:
+                _inflight.discard(label)
+
+    threading.Thread(target=run, name=f"fixtime-{label}", daemon=True).start()
+
+
+def fix_time(label: str, district: str | None = None, allow_network: bool = False) -> dict[str, Any] | None:
+    """Contract `fix_time` object for the label (district version when available), or None.
+
+    Never touches the network unless allow_network=True (only warm_cache / the CLI do). On a cold or
+    stale cache it returns the stale entry or the evidence fallback immediately and refreshes in the
+    background, so a request is never stuck behind a 50k-row DataSF query."""
     _check_label(label)
     with _lock:
         cache = _load_cache()
     entry = cache.get(label)
-    fresh = entry and (time.time() - _parse_ts(entry["computed"]).timestamp() < CACHE_TTL_S if _parse_ts(entry.get("computed")) else False)
-    if not fresh and allow_network:
-        try:
-            entry = compute_fix_times(label)
-            with _lock:
-                cache = _load_cache()
-                cache[label] = entry
-                _save_cache(cache)
-        except Exception:
-            entry = entry or None  # keep a stale entry over nothing
+    computed = _parse_ts(entry.get("computed")) if entry else None
+    fresh = bool(computed) and (_now() - computed).total_seconds() < CACHE_TTL_S
+    if not fresh:
+        if allow_network:
+            entry = _refresh(label) or entry  # keep a stale entry over nothing
+        else:
+            _refresh_async(label)
     if not entry:
         return _evidence_fallback(label)
     if district and district in entry.get("districts", {}):
@@ -309,9 +349,9 @@ def get_context(label: str, lat: float, lng: float) -> dict[str, Any]:
         except Exception:
             address, district = None, None
 
-    t1, t2 = threading.Thread(target=_nearby), threading.Thread(target=_addr)
+    t1, t2 = threading.Thread(target=_nearby, daemon=True), threading.Thread(target=_addr, daemon=True)
     t1.start(); t2.start(); t1.join(TIMEOUT_LIVE_S + 1); t2.join(TIMEOUT_LIVE_S + 1)
-    ft = fix_time(label, district)
+    ft = fix_time(label, district, allow_network=False)  # cache / evidence only; never a 50k-row query in a request
     data_as_of = max((r.get("data_as_of") or "" for r in rows_seen), default="") or _iso(_now())
     return {
         "label": label,

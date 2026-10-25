@@ -15,7 +15,9 @@
   client.messages.parse(output_format=Report). No temperature/top_p/top_k, thinking left on.
   Refusals: stop_reason == "refusal" -> ReportRefused. Server-side fallbacks are enabled when the SDK
   accepts them (betas=["server-side-fallback-2026-07-01"], fallbacks="default"), else plain parse.
-- Never calls any SF 311 endpoint. 30 s timeout, 1 retry.
+- Never calls any SF 311 endpoint. 30 s timeout, no SDK retries (the app answers or 503s within ~30 s).
+- Every failure is a ReportError: bad input, API/timeout/connection errors, refusals, Pydantic
+  validation inside parse, contract validation. The app never sees a 500 from this module.
 """
 from __future__ import annotations
 
@@ -86,7 +88,8 @@ class Report(BaseModel):
 # prompt
 # ----------------------------------------------------------------------------
 def _fmt_classification(cls: dict[str, Any]) -> str:
-    rows = [f"- {i + 1}. `{t['label']}` ({t.get('display_name', DISPLAY.get(t['label'], ''))}): p = {t['prob']:.2f}"
+    rows = [f"- {i + 1}. `{t.get('label')}` ({t.get('display_name') or DISPLAY.get(t.get('label'), '')}): "
+            f"p = {float(t.get('prob', 0.0)):.2f}"
             for i, t in enumerate(cls.get("top_k", []))]
     rows.append(f"- abstain: {cls.get('abstain')} (threshold {cls.get('abstain_threshold')})"
                 + ("; the classifier is NOT confident: judge the photo yourself." if cls.get("abstain") else ""))
@@ -164,13 +167,18 @@ def _validate_request(request: dict[str, Any]) -> None:
             raise ReportError(f"request missing `{k}`")
     if request["media_type"] not in ("image/jpeg", "image/png", "image/webp"):
         raise ReportError(f"unsupported media_type {request['media_type']}")
-    if not request["classification"].get("top_k"):
+    top_k = request["classification"].get("top_k") if isinstance(request["classification"], dict) else None
+    if not top_k or not isinstance(top_k, list):
         raise ReportError("classification.top_k is empty")
+    for t in top_k:
+        if not isinstance(t, dict) or "label" not in t or "prob" not in t:
+            raise ReportError("classification.top_k items need label and prob")
 
 
 def _client(timeout: float):
     import anthropic
-    return anthropic.Anthropic(timeout=timeout, max_retries=1)
+    # max_retries=0: the live path must answer (or 503) within ~timeout, not timeout x retries
+    return anthropic.Anthropic(timeout=timeout, max_retries=0)
 
 
 def _call(client, messages: list[dict[str, Any]]):
@@ -180,8 +188,10 @@ def _call(client, messages: list[dict[str, Any]]):
                   output_config={"effort": "low"})
     try:
         return client.beta.messages.parse(betas=["server-side-fallback-2026-07-01"], fallbacks="default", **common)
-    except TypeError:  # older SDK: no `fallbacks` kwarg
-        return client.messages.parse(**common)
+    except TypeError as e:  # older SDK: no `fallbacks` kwarg. Any other TypeError is a real bug -> ReportError
+        if "fallbacks" in str(e) or "unexpected keyword" in str(e):
+            return client.messages.parse(**common)
+        raise
     except anthropic.BadRequestError as e:  # API rejected the beta: retry without it
         if "fallback" in str(e).lower() or "beta" in str(e).lower():
             return client.messages.parse(**common)
@@ -190,7 +200,20 @@ def _call(client, messages: list[dict[str, Any]]):
 
 def write_report(request: dict[str, Any], context: dict[str, Any] | None = None, client=None,
                  timeout: float = TIMEOUT_S) -> dict[str, Any]:
-    """Return a dict matching contracts/report.response.schema.json, or raise ReportError."""
+    """Return a dict matching contracts/report.response.schema.json, or raise ReportError.
+
+    Every failure mode becomes a ReportError (A's app maps it to 503): bad input, SDK/API errors,
+    timeouts, a refusal, a structured output that fails Pydantic validation inside `parse`, or a
+    body that fails the contract schema. Nothing else escapes."""
+    try:
+        return _write_report(request, context, client, timeout)
+    except ReportError:
+        raise
+    except Exception as e:  # pydantic.ValidationError, KeyError, TypeError, anything unexpected
+        raise ReportError(f"{type(e).__name__}: {str(e)[:200]}") from e
+
+
+def _write_report(request: dict[str, Any], context: dict[str, Any] | None, client, timeout: float) -> dict[str, Any]:
     import anthropic
 
     _validate_request(request)

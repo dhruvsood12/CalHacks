@@ -38,8 +38,9 @@ def _rows(now):
 
 
 def test_get_context_happy_path(monkeypatch, tmp_path):
-    now = datetime.now()
+    now = C._now()  # Pacific, like DataSF's timestamps, whatever the test box's TZ
     monkeypatch.setattr(C, "CACHE_PATH", tmp_path / "fix_times.json")
+    fix_time_queries = []
 
     def fake_soql(params, timeout):
         sel = params["$select"]
@@ -52,6 +53,7 @@ def test_get_context_happy_path(monkeypatch, tmp_path):
                      "supervisor_district": "2.0", "data_as_of": "2026-10-24T01:01:00.000"}]
         if sel.startswith("requested_datetime"):
             assert "closed_date IS NOT NULL" in params["$where"]
+            fix_time_queries.append(params)
             rows = []
             for i in range(100):
                 a = now - timedelta(days=100 + i)
@@ -62,7 +64,10 @@ def test_get_context_happy_path(monkeypatch, tmp_path):
         raise AssertionError(params)
 
     monkeypatch.setattr(C, "_soql", fake_soql)
+    C.warm_cache(["pavement_defect"])  # what A's app does at startup
+    assert len(fix_time_queries) == 1
     body = C.get_context("pavement_defect", LAT, LNG)
+    assert len(fix_time_queries) == 1  # the request path never runs the fix-time query
     _validate(body)
     assert body["label"] == "pavement_defect"
     assert body["address"].startswith("3601 LYON")
@@ -95,6 +100,37 @@ def test_network_failure_degrades_gracefully(monkeypatch, tmp_path):
     # evidence fallback from docs/evidence/city_context_stats.json
     assert body["fix_time"] is not None and "cached evidence" in body["fix_time"]["scope"]
     assert body["fix_time"]["median_days"] == pytest.approx(6.79)
+
+
+def test_cold_cache_never_blocks_the_request(monkeypatch, tmp_path):
+    """A slow fix-time query must not be on the request path: get_context returns at once with the
+    evidence fallback and the refresh happens in the background."""
+    import time as _t
+    monkeypatch.setattr(C, "CACHE_PATH", tmp_path / "cold.json")
+    started = []
+
+    def slow_soql(params, timeout):
+        if params["$select"].startswith("requested_datetime"):
+            started.append(_t.time())
+            _t.sleep(1.5)
+            return []
+        return []
+
+    monkeypatch.setattr(C, "_soql", slow_soql)
+    t0 = _t.time()
+    body = C.get_context("streetlight", LAT, LNG)
+    assert _t.time() - t0 < 1.0, "get_context waited on the fix-time query"
+    _validate(body)
+    assert "cached evidence" in body["fix_time"]["scope"]
+    _t.sleep(0.2)
+    assert started, "background refresh was not started"
+
+
+def test_now_is_pacific():
+    from datetime import timezone
+    from zoneinfo import ZoneInfo
+    la = datetime.now(timezone.utc).astimezone(ZoneInfo("America/Los_Angeles")).replace(tzinfo=None)
+    assert abs((C._now() - la).total_seconds()) < 5
 
 
 def test_unknown_label_rejected():

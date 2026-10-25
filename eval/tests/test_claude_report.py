@@ -119,3 +119,35 @@ def test_bad_request_rejected_before_any_call():
     with pytest.raises(R.ReportError):
         R.write_report({"image_b64": "x", "media_type": "image/gif", "classification": {}, "language": "en"}, client=client)
     assert client.calls == []
+    # top_k items without prob (A's stub could regress) -> ReportError, not KeyError
+    req = request()
+    req["classification"]["top_k"][0] = {"label": "graffiti"}
+    with pytest.raises(R.ReportError):
+        R.write_report(req, client=client)
+    assert client.calls == []
+
+
+def test_every_unexpected_failure_is_a_report_error():
+    """pydantic.ValidationError raised inside messages.parse, or any other exception, must surface
+    as ReportError so A's app answers 503, never 500."""
+    import pydantic
+
+    class Raising(FakeClient):
+        def __init__(self, exc):
+            super().__init__(good_report())
+            self.exc = exc
+
+        def _beta_parse(self, **kw):
+            raise self.exc
+
+    try:
+        R.Report(category="pavement_defect")  # missing fields -> a ValidationError instance to replay
+    except pydantic.ValidationError as e:
+        verr = e
+    for exc in (verr, TypeError("boom"), RuntimeError("weird")):
+        with pytest.raises(R.ReportError):
+            R.write_report(request(), client=Raising(exc))
+    # the SDK client is built with no retries so the worst case stays ~timeout
+    import anthropic
+    c = R._client(30.0)
+    assert isinstance(c, anthropic.Anthropic) and c.max_retries == 0
