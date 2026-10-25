@@ -40,7 +40,8 @@
           "timm_kwargs",
           "img_size",
           "mean",
-          "std"
+          "std",
+          "input_wh"
         ],
         "properties": {
           "file": {
@@ -56,7 +57,7 @@
           },
           "img_size": {
             "type": "integer",
-            "description": "Square side. Resize short side -> center crop. Never pad."
+            "description": "Input width in pixels (kept for compatibility; see input_wh)."
           },
           "mean": {
             "type": "array",
@@ -73,6 +74,27 @@
             },
             "minItems": 3,
             "maxItems": 3
+          },
+          "input_wh": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            },
+            "minItems": 2,
+            "maxItems": 2,
+            "description": "[width, height] fed to the network. Preprocess: resize so the image covers it, center-crop. Never pad or squash."
+          },
+          "crop_mode": {
+            "type": "string",
+            "enum": [
+              "square",
+              "portrait34"
+            ],
+            "description": "Which crop mode the member was trained with (chosen on val)"
+          },
+          "run": {
+            "type": "string",
+            "description": "Training run name (runs/<run>/)"
           }
         }
       }
@@ -104,6 +126,18 @@
     "split_manifest_sha256": {
       "type": "object",
       "description": "Copy of SPLIT_MANIFEST.json 'files'"
+    },
+    "geo_prior_beta": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0,
+      "description": "Geo-prior weight (PLAN 3.7); null/0 = off. Set by B on val."
+    },
+    "tta_hflip": {
+      "type": "boolean",
+      "description": "Average logits with a horizontally flipped copy; kept only if val improves"
     }
   }
 }
