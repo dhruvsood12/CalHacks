@@ -1,0 +1,232 @@
+{
+  "window": [
+    "2025-11-01",
+    "2025-11-15"
+  ],
+  "lookback_days": 14,
+  "radius_m": 50,
+  "source": "DataSF 311 Cases vw6y-z8j6, all sources",
+  "method": "scripts/city_context_stats.py (unchanged), window overridden by eval/city_context_window.py",
+  "computed": "2026-10-24T20:05:03",
+  "overall": {
+    "new_reports": 26225,
+    "already_open_nearby": 9647,
+    "already_open_nearby_pct": 36.8
+  },
+  "per_class": {
+    "garbage_debris": {
+      "new_reports": 13105,
+      "already_open_nearby": 5508,
+      "already_open_nearby_pct": 42.0,
+      "closed_pct": 99.5,
+      "median_days_to_close": 0.32,
+      "p75_days_to_close": 1.08
+    },
+    "graffiti": {
+      "new_reports": 3988,
+      "already_open_nearby": 2774,
+      "already_open_nearby_pct": 69.6,
+      "closed_pct": 95.8,
+      "median_days_to_close": 9.85,
+      "p75_days_to_close": 30.05
+    },
+    "encampment": {
+      "new_reports": 1246,
+      "already_open_nearby": 337,
+      "already_open_nearby_pct": 27.0,
+      "closed_pct": 92.2,
+      "median_days_to_close": 0.86,
+      "p75_days_to_close": 1.94
+    },
+    "parked_on_sidewalk": {
+      "new_reports": 1238,
+      "already_open_nearby": 126,
+      "already_open_nearby_pct": 10.2,
+      "closed_pct": 100.0,
+      "median_days_to_close": 0.11,
+      "p75_days_to_close": 0.23
+    },
+    "blocking_driveway": {
+      "new_reports": 2541,
+      "already_open_nearby": 152,
+      "already_open_nearby_pct": 6.0,
+      "closed_pct": 100.0,
+      "median_days_to_close": 0.06,
+      "p75_days_to_close": 0.13
+    },
+    "abandoned_vehicle": {
+      "new_reports": 788,
+      "already_open_nearby": 170,
+      "already_open_nearby_pct": 21.6,
+      "closed_pct": 100.0,
+      "median_days_to_close": 2.96,
+      "p75_days_to_close": 5.88
+    },
+    "blocked_sidewalk": {
+      "new_reports": 452,
+      "already_open_nearby": 67,
+      "already_open_nearby_pct": 14.8,
+      "closed_pct": 97.3,
+      "median_days_to_close": 0.09,
+      "p75_days_to_close": 2.87
+    },
+    "sidewalk_defect": {
+      "new_reports": 175,
+      "already_open_nearby": 38,
+      "already_open_nearby_pct": 21.7,
+      "closed_pct": 96.0,
+      "median_days_to_close": 3.27,
+      "p75_days_to_close": 7.22
+    },
+    "pavement_defect": {
+      "new_reports": 56,
+      "already_open_nearby": 6,
+      "already_open_nearby_pct": 10.7,
+      "closed_pct": 87.5,
+      "median_days_to_close": 4.75,
+      "p75_days_to_close": 37.9
+    },
+    "curb_ramp_defect": {
+      "new_reports": 47,
+      "already_open_nearby": 6,
+      "already_open_nearby_pct": 12.8,
+      "closed_pct": 91.5,
+      "median_days_to_close": 4.56,
+      "p75_days_to_close": 78.94
+    },
+    "sewer_vent_cover": {
+      "new_reports": 53,
+      "already_open_nearby": 5,
+      "already_open_nearby_pct": 9.4,
+      "closed_pct": 98.1,
+      "median_days_to_close": 4.33,
+      "p75_days_to_close": 46.06
+    },
+    "tree_issue": {
+      "new_reports": 723,
+      "already_open_nearby": 200,
+      "already_open_nearby_pct": 27.7,
+      "closed_pct": 80.2,
+      "median_days_to_close": 25.56,
+      "p75_days_to_close": 37.91
+    },
+    "illegal_posting": {
+      "new_reports": 181,
+      "already_open_nearby": 48,
+      "already_open_nearby_pct": 26.5,
+      "closed_pct": 95.0,
+      "median_days_to_close": 9.94,
+      "p75_days_to_close": 26.47
+    },
+    "litter_receptacle": {
+      "new_reports": 325,
+      "already_open_nearby": 34,
+      "already_open_nearby_pct": 10.5,
+      "closed_pct": 96.9,
+      "median_days_to_close": 1.08,
+      "p75_days_to_close": 3.58
+    },
+    "streetlight": {
+      "new_reports": 240,
+      "already_open_nearby": 22,
+      "already_open_nearby_pct": 9.2,
+      "closed_pct": 99.6,
+      "median_days_to_close": 1.97,
+      "p75_days_to_close": 5.64
+    },
+    "sewer_flooding": {
+      "new_reports": 672,
+      "already_open_nearby": 86,
+      "already_open_nearby_pct": 12.8,
+      "closed_pct": 97.3,
+      "median_days_to_close": 0.16,
+      "p75_days_to_close": 2.08
+    },
+    "traffic_sign": {
+      "new_reports": 395,
+      "already_open_nearby": 68,
+      "already_open_nearby_pct": 17.2,
+      "closed_pct": 99.5,
+      "median_days_to_close": 7.71,
+      "p75_days_to_close": 28.05
+    }
+  },
+  "comparison_with_first_window": {
+    "first_window": [
+      "2025-06-15",
+      "2025-06-29"
+    ],
+    "first_pct": 44.4,
+    "this_pct": 36.8,
+    "per_class_pct": {
+      "garbage_debris": {
+        "first": 50.7,
+        "this": 42.0
+      },
+      "graffiti": {
+        "first": 73.9,
+        "this": 69.6
+      },
+      "encampment": {
+        "first": 31.6,
+        "this": 27.0
+      },
+      "parked_on_sidewalk": {
+        "first": 8.6,
+        "this": 10.2
+      },
+      "blocking_driveway": {
+        "first": 4.3,
+        "this": 6.0
+      },
+      "abandoned_vehicle": {
+        "first": 21.8,
+        "this": 21.6
+      },
+      "blocked_sidewalk": {
+        "first": 23.0,
+        "this": 14.8
+      },
+      "sidewalk_defect": {
+        "first": 30.8,
+        "this": 21.7
+      },
+      "pavement_defect": {
+        "first": 11.8,
+        "this": 10.7
+      },
+      "curb_ramp_defect": {
+        "first": 6.4,
+        "this": 12.8
+      },
+      "sewer_vent_cover": {
+        "first": 4.3,
+        "this": 9.4
+      },
+      "tree_issue": {
+        "first": 31.7,
+        "this": 27.7
+      },
+      "illegal_posting": {
+        "first": 49.5,
+        "this": 26.5
+      },
+      "litter_receptacle": {
+        "first": 13.2,
+        "this": 10.5
+      },
+      "streetlight": {
+        "first": 3.9,
+        "this": 9.2
+      },
+      "sewer_flooding": {
+        "first": 7.7,
+        "this": 12.8
+      },
+      "traffic_sign": {
+        "first": 21.7,
+        "this": 17.2
+      }
+    }
+  }
+}
