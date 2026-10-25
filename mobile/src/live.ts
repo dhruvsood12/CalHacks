@@ -13,6 +13,7 @@ export type NewReport = {
   language: string;
   title_en: string;
   model_label: string;
+  submitted_label?: string;
   confidence: number;
   chosen_by: 'model' | 'resident';
   agrees_with_classifier: boolean;

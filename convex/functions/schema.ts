@@ -12,6 +12,7 @@ export const reportFields = {
   language: v.string(),
   title_en: v.string(),
   model_label: v.string(),
+  submitted_label: v.optional(v.string()),
   confidence: v.number(),
   chosen_by: v.union(v.literal('model'), v.literal('resident')),
   agrees_with_classifier: v.boolean(),
