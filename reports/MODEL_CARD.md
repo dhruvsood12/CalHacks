@@ -5,10 +5,10 @@
 ## 1. What it is
 A 17-way image classifier that maps a resident's photo of a street problem to the SF 311 category (and so the agency) it is usually filed under, with a calibrated probability and an explicit **abstain** decision. Location enters only through a transparent geo-prior table (PLAN §3.7), never through the network. Claude writes the report text and gives a second opinion when the model abstains.
 
-- **Model version:** `TBD` ← `reports/final_eval.json: model_version`
-- **Members / backbones:** `TBD` ← `reports/val_metrics.json: members[].timm_name` (recipe from A: `runs/<run>/config`)
-- **Inputs:** RGB pixels, short side resized then centre-cropped (never padded or squashed); crop mode chosen on val per backbone ← `reports/probe_bakeoff.json: chosen_crop_mode`
-- **Outputs:** 17 calibrated probabilities (temperature `TBD` ← `reports/val_metrics.json: temperature`), top-3, `abstain = max_prob < TBD` ← `reports/val_metrics.json: abstain_threshold`
+- **Model version:** `ens2-siglip2-dinov2-s13` ← `reports/val_metrics.json: model_version` (confirmed on test by `reports/final_eval.json: model_version`)
+- **Members / backbones:** a 2-member ensemble, softmax probabilities averaged ← `reports/val_metrics.json: members[]`: `siglip2-square-lpft-default-s13` (SigLIP 2 ViT-B/16 @ 384, `vit_base_patch16_siglip_384.v2_webli`) and `dinov2-square-lpft-default-s13` (DINOv2 ViT-B/14 @ 378, `vit_base_patch14_dinov2.lvd142m`). Chosen on val by greedy forward selection over 6 fine-tuned runs (2 backbones × default/alt recipe/seed 21): `reports/val_greedy-*.json`; ConvNeXt and the alternative recipe lost (`reports/val_*alt-s7*.json`).
+- **Inputs:** RGB pixels, resized to cover the input then centre-cropped (never padded or squashed); crop mode chosen on val per backbone (square for both members) ← `reports/probe_bakeoff.json: chosen_crop_mode`
+- **Outputs:** 17 calibrated probabilities (temperature **0.866** ← `reports/val_metrics.json: temperature`), top-3, `abstain = max_prob < 0.777` ← `reports/val_metrics.json: abstain_threshold`
 
 ## 2. Data
 - **Source:** DataSF 311 Cases (`vw6y-z8j6`), mobile-app reports with a direct photo, filed 2024-10-01 → 2026-10-01, 17 classes × 1,800 scraped → 29,571 after the leakage purge (`data/SPLIT_MANIFEST.json: input_rows, dropped`).
@@ -47,8 +47,10 @@ Confusion matrix: `reports/confusion_matrix.png`. Most confused pairs: `TBD` ←
 | **Fine-tuned model** | `TBD` | `TBD` | `subset_1020.model` |
 | Cascade (model; Claude when it abstains) | `TBD` | `TBD` | `subset_1020.cascade_model_then_claude_on_abstain` |
 
-### 4.3 Calibration and abstention (val) ← `reports/val_metrics.json`
-Temperature `TBD`, abstain threshold `TBD` = smallest max-probability whose Clopper-Pearson lower-95% bound on val selective accuracy is ≥ 0.90 (`abstain_rule`). Val coverage at that threshold `TBD` (`selective.coverage`). Geo-prior β `TBD` chosen by val macro-F1 with AURC as tie-break (`geo_prior.sweep`).
+### 4.3 Calibration and abstention (val, n = 4,252) ← `reports/val_metrics.json`
+Val macro-F1 **78.5** [77.0, 79.9] (`macro_f1`, `ci95.macro_f1`), top-1 78.7, top-3 92.4, AURC 0.076 (`aurc`). Temperature **0.866** brings ECE from 4.9% to 2.4% (`ece_uncalibrated` → `ece`). Abstain threshold **0.777** = the smallest max-probability whose Clopper-Pearson lower-95% bound on val selective accuracy is ≥ 0.90 (`abstain_rule`): at that threshold the model answers **67.2%** of val photos (`selective.coverage`) and is right on **90.9%** of those (`selective.selective_accuracy`, lower bound 0.900). Geo-prior β: `TBD` ← `geo_prior.beta` (0 = off; tuned on val by macro-F1 with AURC as tie-break, `geo_prior.sweep`, once A's `geoprior.npz` is available); the no-location path uses its own temperature/threshold (`val_metrics.no_geo_prior` in the artifact).
+
+Val baselines for context (`reports/val_<run>.json`): best frozen linear probe (SigLIP 2, square) macro-F1 71.6 [69.9, 73.2]; single fine-tuned DINOv2 77.7 [76.2, 79.1]; Claude zero-shot on the 340-image val dev subset `TBD` ← `reports/claude_zeroshot_dev.json: macro_f1` (v1 prompt 68.4, `claude_zeroshot_dev_v1.json`).
 
 ## 5. Known failure modes and limitations
 - `TBD` from the val error analysis (`reports/val_<final>.json: top_confusions`), typically: sidewalk vs curb-ramp vs pavement damage; garbage next to a trash can vs the can itself; posters vs graffiti; the three car categories when the camera angle hides the driveway or curb.
