@@ -3,6 +3,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { NOTE_LIMIT } from '../../api/types';
 import { AddressEntry } from '../../components/AddressEntry';
 import { LANGUAGES, deviceLanguage } from '../../languages';
 import { GeoFix, describeFix, locateHere, photoLocation } from '../../location';
@@ -85,7 +86,7 @@ export default function CaptureScreen() {
   }
 
   function identify() {
-    if (!photo) {
+    if (!photo || blockedReason) {
       return;
     }
     const fix = location.kind === 'ready' ? location.fix : null;
@@ -106,6 +107,14 @@ export default function CaptureScreen() {
   }
 
   const where = locationText(location);
+  const located = location.kind === 'ready' || location.kind === 'address';
+  const blockedReason = !photo
+    ? 'Take or choose a photo first.'
+    : location.kind === 'locating'
+      ? 'Finding the location…'
+      : !located
+        ? 'Enter the address above to continue.'
+        : null;
   const canChange = location.kind === 'ready' || location.kind === 'address';
   const showAddressEntry = editing || location.kind === 'denied' || location.kind === 'failed';
   const currentAddress =
@@ -184,17 +193,22 @@ export default function CaptureScreen() {
         onChangeText={setNote}
         placeholder="e.g. Deep pothole in the right lane"
         placeholderTextColor={colors.muted}
-        maxLength={500}
+        maxLength={NOTE_LIMIT}
         multiline
       />
+      <Text style={[styles.counter, note.length >= NOTE_LIMIT && styles.counterFull]}>
+        {note.length}/{NOTE_LIMIT}
+      </Text>
 
       <Pressable
-        style={[styles.button, styles.buttonPrimary, styles.identify, !photo && styles.buttonDisabled]}
+        style={[styles.button, styles.buttonPrimary, styles.identify, blockedReason && styles.buttonDisabled]}
         onPress={identify}
-        disabled={!photo}
+        disabled={!!blockedReason}
+        accessibilityHint={blockedReason ?? undefined}
       >
         <Text style={styles.buttonPrimaryText}>Identify the problem</Text>
       </Pressable>
+      {blockedReason ? <Text style={styles.blocked}>{blockedReason}</Text> : null}
     </ScrollView>
   );
 }
@@ -232,5 +246,8 @@ const styles = StyleSheet.create({
     color: colors.text,
     textAlignVertical: 'top',
   },
+  counter: { alignSelf: 'flex-end', fontSize: 13, color: colors.muted, marginTop: -6 },
+  counterFull: { color: colors.danger, fontWeight: '600' },
   identify: { flex: 0, marginTop: 8 },
+  blocked: { fontSize: 14, color: colors.muted, textAlign: 'center' },
 });
