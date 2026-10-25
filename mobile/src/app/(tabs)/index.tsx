@@ -3,6 +3,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { AddressEntry } from '../../components/AddressEntry';
 import { LANGUAGES, deviceLanguage } from '../../languages';
 import { GeoFix, describeFix, locateHere, photoLocation } from '../../location';
 import { colors } from '../../theme';
@@ -12,7 +13,8 @@ type LocationState =
   | { kind: 'locating' }
   | { kind: 'denied' }
   | { kind: 'failed' }
-  | { kind: 'ready'; fix: GeoFix };
+  | { kind: 'ready'; fix: GeoFix }
+  | { kind: 'address'; address: string };
 
 const CAMERA_OPTIONS: ImagePicker.ImagePickerOptions = { mediaTypes: ['images'], quality: 0.9 };
 const LIBRARY_OPTIONS: ImagePicker.ImagePickerOptions = { ...CAMERA_OPTIONS, exif: true };
@@ -22,11 +24,13 @@ function locationText(state: LocationState) {
     case 'locating':
       return 'Finding your location…';
     case 'denied':
-      return 'Location is off. Add the address in the note below.';
+      return 'Location is off. Enter the address instead.';
     case 'failed':
-      return "Couldn't get your location. Add the address in the note below.";
+      return "Couldn't get your location. Enter the address instead.";
     case 'ready':
       return describeFix(state.fix);
+    case 'address':
+      return `${state.address} · address you entered`;
     default:
       return null;
   }
@@ -37,8 +41,10 @@ export default function CaptureScreen() {
   const [location, setLocation] = useState<LocationState>({ kind: 'idle' });
   const [language, setLanguage] = useState(deviceLanguage);
   const [note, setNote] = useState('');
+  const [editing, setEditing] = useState(false);
 
   async function locate(asset: ImagePicker.ImagePickerAsset | null) {
+    setEditing(false);
     setLocation({ kind: 'locating' });
     try {
       const fromPhoto = asset ? await photoLocation(asset.exif) : null;
@@ -83,6 +89,7 @@ export default function CaptureScreen() {
       return;
     }
     const fix = location.kind === 'ready' ? location.fix : null;
+    const typedOnly = location.kind === 'address' ? location.address : null;
     router.navigate({
       pathname: '/result',
       params: {
@@ -90,12 +97,19 @@ export default function CaptureScreen() {
         key: photo.assetId ?? photo.fileName ?? photo.uri,
         language,
         note: note.trim(),
-        ...(fix ? { lat: String(fix.lat), lng: String(fix.lng), address: fix.address ?? '' } : {}),
+        ...(fix
+          ? { lat: String(fix.lat), lng: String(fix.lng), address: fix.address ?? '', source: fix.source }
+          : {}),
+        ...(typedOnly ? { address: typedOnly, source: 'typed' } : {}),
       },
     });
   }
 
   const where = locationText(location);
+  const canChange = location.kind === 'ready' || location.kind === 'address';
+  const showAddressEntry = editing || location.kind === 'denied' || location.kind === 'failed';
+  const currentAddress =
+    location.kind === 'ready' ? location.fix.address ?? '' : location.kind === 'address' ? location.address : '';
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
@@ -121,7 +135,28 @@ export default function CaptureScreen() {
         <View style={styles.locationRow}>
           <Ionicons name="location" size={18} color={colors.accent} />
           <Text style={styles.location}>{where}</Text>
+          {canChange && !editing ? (
+            <Pressable onPress={() => setEditing(true)} hitSlop={8}>
+              <Text style={styles.change}>Change</Text>
+            </Pressable>
+          ) : null}
         </View>
+      ) : null}
+
+      {showAddressEntry ? (
+        <AddressEntry
+          key={currentAddress}
+          initial={currentAddress}
+          onResolved={(fix) => {
+            setLocation({ kind: 'ready', fix });
+            setEditing(false);
+          }}
+          onUseText={(address) => {
+            setLocation({ kind: 'address', address });
+            setEditing(false);
+          }}
+          onCancel={canChange ? () => setEditing(false) : undefined}
+        />
       ) : null}
 
       <Text style={styles.label}>Report language</Text>
@@ -180,6 +215,7 @@ const styles = StyleSheet.create({
   buttonDisabled: { opacity: 0.4 },
   locationRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   location: { flex: 1, fontSize: 15, color: colors.text },
+  change: { fontSize: 15, fontWeight: '600', color: colors.accent },
   label: { fontSize: 13, fontWeight: '600', color: colors.muted, textTransform: 'uppercase', marginTop: 4 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: { borderRadius: 16, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 12, paddingVertical: 6 },

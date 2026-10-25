@@ -13,6 +13,7 @@ export type GeoFix = {
 type Coordinates = { lat: number; lng: number; accuracy: number | null };
 
 const CITY_SUFFIX = 'San Francisco, CA';
+const SF_BOUNDS = { south: 37.63, north: 37.84, west: -122.53, east: -122.34 };
 
 function formatAddress(place: Location.LocationGeocodedAddress | undefined) {
   if (!place) {
@@ -20,6 +21,10 @@ function formatAddress(place: Location.LocationGeocodedAddress | undefined) {
   }
   const street = [place.streetNumber, place.street].filter(Boolean).join(' ');
   return street || place.name || null;
+}
+
+function inSanFrancisco(lat: number, lng: number) {
+  return lat >= SF_BOUNDS.south && lat <= SF_BOUNDS.north && lng >= SF_BOUNDS.west && lng <= SF_BOUNDS.east;
 }
 
 async function addressAt(lat: number, lng: number) {
@@ -104,14 +109,14 @@ export async function geocodeAddress(text: string): Promise<GeoFix | null> {
   const address = text.trim();
   const query = /san francisco|\bsf\b/i.test(address) ? address : `${address}, ${CITY_SUFFIX}`;
   const results = await Location.geocodeAsync(query).catch(() => []);
-  const best = results[0];
+  const best = results.find((result) => inSanFrancisco(result.latitude, result.longitude));
   if (!best) {
     return null;
   }
   return { lat: best.latitude, lng: best.longitude, accuracy: null, address, source: 'typed' };
 }
 
-const SOURCE_LABEL: Record<LocationSource, string> = {
+export const SOURCE_LABEL: Record<LocationSource, string> = {
   gps: 'your location',
   photo: 'from the photo',
   typed: 'address you entered',

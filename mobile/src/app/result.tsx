@@ -12,6 +12,7 @@ import {
   api,
   usingMock,
 } from '../api';
+import { LocationSource, SOURCE_LABEL } from '../location';
 import { preparePhoto } from '../photo';
 import { colors } from '../theme';
 
@@ -23,6 +24,7 @@ type Params = {
   lat?: string;
   lng?: string;
   address?: string;
+  source?: LocationSource;
 };
 
 type Duplicate = 'confirm' | 'file' | null;
@@ -220,6 +222,9 @@ export default function ResultScreen() {
       return;
     }
     const notes = [params.note ?? ''];
+    if (!location && params.address) {
+      notes.push(`Location: ${params.address}.`);
+    }
     const nearest = context?.nearby_open[0];
     if (duplicate === 'confirm' && nearest) {
       notes.push(`Also seen on ${today()}. Same problem as open case ${nearest.service_request_id}.`);
@@ -271,7 +276,11 @@ export default function ResultScreen() {
       <View style={styles.row}>
         <Image source={{ uri: params.uri }} style={styles.thumb} />
         <View style={styles.summary}>
-          <Text style={styles.muted}>{params.address || 'No location'}</Text>
+          <Text style={styles.muted}>
+            {params.address
+              ? `${params.address}${params.source ? ` · ${SOURCE_LABEL[params.source]}` : ''}`
+              : 'No location'}
+          </Text>
           {classification.used_location ? <Text style={styles.muted}>Location helped the prediction</Text> : null}
         </View>
       </View>
