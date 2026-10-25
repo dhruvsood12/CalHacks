@@ -25,7 +25,7 @@ p.logits(["data/images/graffiti/123.jpg", ...])   # np.ndarray float32 (N, 17): 
                                                   # or log of averaged member probs (ensemble)
 p.probs(paths)              # calibrated probabilities: members' softmax probs averaged, then temperature on the log of the average
 ```
-- Preprocessing is fully determined **per member** in `model_meta.json`: resize the short side, center-crop `img_size`, normalize with `mean`/`std`, **no padding**. Each ensemble member gets its own transform.
+- Preprocessing is fully determined **per member** in `model_meta.json`: resize so the image covers `input_wh` = [width, height], center-crop to it, normalize with `mean`/`std`. **No padding.** A member trained on 3:4 crops has `input_wh` like [384, 512]. Each ensemble member gets its own transform.
 - It runs on CUDA if available, otherwise CPU. It batches internally.
 - It must not read any split CSV. It only takes paths. (So `final_eval.py`, in B's lane, is the only place test paths come from.)
 
