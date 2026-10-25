@@ -13,7 +13,21 @@ npx expo start
 - **iOS simulator:** press `i` in the Expo terminal.
 - **Type-check:** `npm run typecheck`
 
+- **Without the API:** leave `EXPO_PUBLIC_API_BASE_URL` unset and the app runs on `contracts/examples` (a "Mock data" badge shows). Set it in `mobile/.env` to A's tunnel URL to use the real `/classify`, `/context` and `/report`.
+
+## Location
+- **Library photo:** uses the GPS stored in the photo (EXIF from the picker). On iOS this works with limited photo access, so the app never asks for photo-library permission.
+- **Camera photo, or a photo with no GPS:** uses the phone's current location.
+- **Location off, or wrong:** the resident types an address. It is geocoded and accepted only inside San Francisco; one that can't be placed is sent as text in the report note.
+- The location line always says which of these it used ("from the photo", "your location", "address you entered").
+
+## Tested on
+- **iOS simulator (iPhone 17 Pro, iOS 26.3), Expo Go, against the mock API.** The demo runs on one iPhone.
+- **Not tested:** Android, and the camera (the simulator has none). The Android EXIF path is written but has never run on a device.
+
 ## Layout
-- `src/app/`: one file per screen (Expo Router). `index.tsx` is Report, plus `map.tsx` and `about.tsx`. `_layout.tsx` holds the tabs.
+- `src/app/(tabs)/`: the tab screens. `index.tsx` is Report (capture), plus `map.tsx` and `about.tsx`.
+- `src/app/result.tsx`: the result screen, pushed over the tabs.
+- `src/api/`: contract types, the mock, and the HTTP client.
 - `src/components/`: shared, non-route components.
 - Always add packages with `npx expo install <pkg>` so the versions match SDK 58.
