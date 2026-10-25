@@ -19,8 +19,9 @@ function formatAddress(place: Location.LocationGeocodedAddress | undefined) {
   if (!place) {
     return null;
   }
-  const street = [place.streetNumber, place.street].filter(Boolean).join(' ');
-  return street || place.name || null;
+  const street = place.street ? [place.streetNumber, place.street].filter(Boolean).join(' ') : null;
+  const name = place.name && !/^\d+$/.test(place.name) ? place.name : null;
+  return street || name || place.city || place.region || null;
 }
 
 function inSanFrancisco(lat: number, lng: number) {
