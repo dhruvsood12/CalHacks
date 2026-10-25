@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "POST /report response (Claude structured output)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["category", "agrees_with_classifier", "agency", "title", "description", "title_en",
+               "description_en", "next_steps", "emergency", "language", "claude_model"],
+  "properties": {
+    "category": {"type": "string", "description": "One of the 17 labels in categories.json, or 'not_a_311_issue'"},
+    "agrees_with_classifier": {"type": "boolean"},
+    "agency": {"type": "string", "description": "primary_agency for category; empty string if not_a_311_issue"},
+    "title": {"type": "string", "description": "In the user's language, <= 80 chars"},
+    "description": {"type": "string", "description": "In the user's language, 1-3 sentences, what and where"},
+    "title_en": {"type": "string"},
+    "description_en": {"type": "string", "description": "English copy for the city"},
+    "next_steps": {"type": "string", "description": "In the user's language: what the user does / what the city does next"},
+    "emergency": {"type": "boolean", "description": "Immediate danger (downed wire, gas, fire, injury): app shows 'Call 911' and no filing flow"},
+    "language": {"type": "string"},
+    "claude_model": {"type": "string", "description": "Model id that served the response (response.model)"}
+  }
+}

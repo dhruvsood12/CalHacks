@@ -1,0 +1,50 @@
+{
+  "model_version": "example-siglip2b16-384-lpft-s13",
+  "classes": [
+    "abandoned_vehicle",
+    "blocked_sidewalk",
+    "blocking_driveway",
+    "curb_ramp_defect",
+    "encampment",
+    "garbage_debris",
+    "graffiti",
+    "illegal_posting",
+    "litter_receptacle",
+    "parked_on_sidewalk",
+    "pavement_defect",
+    "sewer_flooding",
+    "sewer_vent_cover",
+    "sidewalk_defect",
+    "streetlight",
+    "traffic_sign",
+    "tree_issue"
+  ],
+  "members": [
+    {
+      "file": "member_0.pt",
+      "timm_name": "vit_base_patch16_siglip_384.v2_webli",
+      "timm_kwargs": {},
+      "img_size": 384,
+      "mean": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "std": [
+        0.5,
+        0.5,
+        0.5
+      ]
+    }
+  ],
+  "temperature": null,
+  "abstain_threshold": null,
+  "val_metrics": {},
+  "train_git_sha": "0000000",
+  "split_manifest_sha256": {
+    "metadata.csv": "fc88fd9aeeb5ba5171aeb5fdab97c2e63dfa22ec660f49a2283bcbe224132a6c",
+    "train.csv": "24d4a11f330845ceff42aaccccf628d2b150a2e2f7d3bc9f87735e3e4ccd9e40",
+    "val.csv": "6ea33fd090829de4786fc8737f0b19778543e652e3589455aa8d5c7ef839e4a7",
+    "test.csv": "008f5e13290ed84284113a7b05848518e9e27ac65201e00216ba0d252ab3676a"
+  }
+}

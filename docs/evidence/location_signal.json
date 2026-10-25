@@ -1,0 +1,14 @@
+{
+  "split": "train -> val (spatially separated)",
+  "category_from_location_only": {
+    "k": 50,
+    "val_top1": 0.163,
+    "val_top3": 0.355,
+    "chance_top1": 0.059,
+    "chance_top3": 0.176
+  },
+  "agency_given_true_category": {
+    "usual_agency_for_category": 0.715,
+    "nearest_same_category_report": 0.635
+  }
+}

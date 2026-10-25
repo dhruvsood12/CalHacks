@@ -1,0 +1,48 @@
+name: ci
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  guards:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install guard dependencies
+        run: pip install -r scripts/requirements.txt
+      - name: Data integrity and leakage audit
+        run: python scripts/verify_data.py
+      - name: Repo guardrails (test-set access, secrets, sizes, contracts)
+        run: python scripts/guard_repo.py
+      - name: Python syntax
+        run: python -m compileall -q scripts ml serve eval
+      - name: eval tests
+        if: hashFiles('eval/tests/**/*.py') != ''
+        run: |
+          pip install -r eval/requirements.txt
+          pytest -q eval/tests
+      - name: serve contract tests
+        if: hashFiles('serve/tests/**/*.py') != ''
+        run: |
+          pip install -r serve/requirements.txt pytest
+          pytest -q serve/tests
+
+  convex:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Type-check Convex functions
+        if: hashFiles('convex/package-lock.json') != ''
+        working-directory: convex
+        run: |
+          npm ci
+          npx tsc --noEmit
+# The iOS app is not built in CI (needs a macOS runner and signing); C attaches
+# a screen recording from a real device to each app PR instead.

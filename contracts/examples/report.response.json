@@ -1,0 +1,13 @@
+{
+  "category": "pavement_defect",
+  "agrees_with_classifier": true,
+  "agency": "PW - Street and Sewer Repair",
+  "title": "Bache grande en la calle",
+  "description": "Hay un bache profundo en el carril derecho, frente al 3601 de Lyon St. Los autos lo esquivan hacia el carril contrario.",
+  "title_en": "Large pothole in the street",
+  "description_en": "Deep pothole in the right lane in front of 3601 Lyon St. Cars swerve into the oncoming lane to avoid it.",
+  "next_steps": "Copie este reporte en sf311.org o la app SF311. El reporte va a Obras Públicas (Public Works).",
+  "emergency": false,
+  "language": "es",
+  "claude_model": "claude-opus-5-5"
+}

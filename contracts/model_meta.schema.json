@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "model_meta.json in artifacts/<model_version>/ (A exports, B calibrates)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "model_version",
+    "classes",
+    "members",
+    "temperature",
+    "abstain_threshold",
+    "val_metrics",
+    "train_git_sha",
+    "split_manifest_sha256"
+  ],
+  "properties": {
+    "model_version": {
+      "type": "string",
+      "description": "e.g. ens-siglip2+dinov3-lpft-<shortsha>"
+    },
+    "classes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 17,
+      "maxItems": 17,
+      "description": "Must equal the label order in contracts/categories.json"
+    },
+    "members": {
+      "type": "array",
+      "minItems": 1,
+      "description": "One entry per checkpoint. >1 = ensemble: softmax probabilities are averaged, then temperature applies to the averaged log-probabilities.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "file",
+          "timm_name",
+          "timm_kwargs",
+          "img_size",
+          "mean",
+          "std"
+        ],
+        "properties": {
+          "file": {
+            "type": "string",
+            "description": "e.g. member_0.pt (state_dict)"
+          },
+          "timm_name": {
+            "type": "string"
+          },
+          "timm_kwargs": {
+            "type": "object",
+            "description": "Extra kwargs for timm.create_model, e.g. {\"img_size\": 384}"
+          },
+          "img_size": {
+            "type": "integer",
+            "description": "Square side. Resize short side -> center crop. Never pad."
+          },
+          "mean": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 3,
+            "maxItems": 3
+          },
+          "std": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 3,
+            "maxItems": 3
+          }
+        }
+      }
+    },
+    "temperature": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "exclusiveMinimum": 0,
+      "description": "null when exported by A; set by B's eval/calibrate.py on val"
+    },
+    "abstain_threshold": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0,
+      "maximum": 1,
+      "description": "null when exported by A; set by B's eval/calibrate.py on val"
+    },
+    "val_metrics": {
+      "type": "object",
+      "description": "Set by B: top1, top3, macro_f1, ece, coverage_at_threshold, acc_at_threshold"
+    },
+    "train_git_sha": {
+      "type": "string"
+    },
+    "split_manifest_sha256": {
+      "type": "object",
+      "description": "Copy of SPLIT_MANIFEST.json 'files'"
+    }
+  }
+}

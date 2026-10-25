@@ -1,0 +1,27 @@
+{
+  "model_version": "stub",
+  "top_k": [
+    {
+      "label": "garbage_debris",
+      "display_name": "Dumped garbage or debris",
+      "agency": "PW - Street and Environmental Services",
+      "prob": 0.38
+    },
+    {
+      "label": "blocked_sidewalk",
+      "display_name": "Blocked sidewalk",
+      "agency": "MTA - Access/Mobility Services Received",
+      "prob": 0.31
+    },
+    {
+      "label": "litter_receptacle",
+      "display_name": "Public trash can problem",
+      "agency": "PW - Street and Environmental Services",
+      "prob": 0.17
+    }
+  ],
+  "abstain": true,
+  "abstain_threshold": 0.55,
+  "latency_ms": 39.5,
+  "used_location": false
+}

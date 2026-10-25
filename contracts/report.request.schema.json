@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "POST /report request",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["image_b64", "media_type", "classification", "language"],
+  "properties": {
+    "image_b64": {"type": "string", "description": "Base64 JPEG, long side <= 1280px, no data: prefix"},
+    "media_type": {"type": "string", "enum": ["image/jpeg", "image/png", "image/webp"]},
+    "classification": {"$ref": "classify.response.schema.json"},
+    "chosen_label": {"type": ["string", "null"], "description": "Set when the user picked a category (e.g. after abstain)"},
+    "language": {"type": "string", "description": "BCP-47 tag, e.g. 'en', 'es', 'zh-Hans', 'fil', 'vi', 'ru'"},
+    "location": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "properties": {
+        "lat": {"type": "number"},
+        "lng": {"type": "number"},
+        "address": {"type": ["string", "null"]}
+      }
+    },
+    "user_note": {"type": ["string", "null"], "maxLength": 500}
+  }
+}

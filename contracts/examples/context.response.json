@@ -1,0 +1,21 @@
+{
+  "label": "pavement_defect",
+  "address": "3601 LYON ST, SAN FRANCISCO, CA 94123",
+  "nearby_open": [
+    {
+      "service_request_id": "000000000000",
+      "distance_m": 38.0,
+      "requested_at": "2026-10-22T09:14:00",
+      "days_open": 2.4,
+      "status": "Open",
+      "address": "3599 LYON ST"
+    }
+  ],
+  "fix_time": {
+    "median_days": 5.6,
+    "p75_days": 13.6,
+    "n": 412,
+    "scope": "citywide, last 12 months"
+  },
+  "data_as_of": "2026-10-24T01:01:00"
+}
