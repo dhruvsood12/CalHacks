@@ -1,3 +1,4 @@
+import { v } from 'convex/values';
 import { internalMutation } from './_generated/server';
 
 export const SEED_MODEL_VERSION = 'demo-seed';
@@ -9,7 +10,7 @@ type SeedReport = {
   agency: string;
   lat: number;
   lng: number;
-  address: string;
+  address: string | null;
   location_source: 'photo' | 'gps' | 'typed';
   language: string;
   title_en: string;
@@ -133,9 +134,14 @@ const REPORTS: SeedReport[] = [
   },
 ];
 
+const MISSION = { lat: 37.76512, lng: -122.41948 };
+
 export const demo = internalMutation({
-  args: {},
-  handler: async (ctx) => {
+  args: { lat: v.optional(v.number()), lng: v.optional(v.number()), address: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const dLat = (args.lat ?? MISSION.lat) - MISSION.lat;
+    const dLng = (args.lng ?? MISSION.lng) - MISSION.lng;
+    const moved = dLat !== 0 || dLng !== 0;
     const existing = await ctx.db.query('reports').collect();
     let removed = 0;
     for (const report of existing) {
@@ -144,8 +150,15 @@ export const demo = internalMutation({
         removed += 1;
       }
     }
-    for (const report of REPORTS) {
-      await ctx.db.insert('reports', { ...report, model_version: SEED_MODEL_VERSION });
+    for (const [index, report] of REPORTS.entries()) {
+      const inCluster = index < 3;
+      await ctx.db.insert('reports', {
+        ...report,
+        lat: inCluster ? report.lat + dLat : report.lat,
+        lng: inCluster ? report.lng + dLng : report.lng,
+        address: inCluster && moved ? args.address ?? null : report.address,
+        model_version: SEED_MODEL_VERSION,
+      });
     }
     return { removed, inserted: REPORTS.length };
   },
