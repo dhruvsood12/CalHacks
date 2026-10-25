@@ -1,3 +1,4 @@
+import * as Clipboard from 'expo-clipboard';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -32,6 +33,23 @@ type Duplicate = 'confirm' | 'file' | null;
 function days(n: number) {
   const rounded = Math.max(1, Math.round(n));
   return `${rounded} ${rounded === 1 ? 'day' : 'days'}`;
+}
+
+function reportText(report: Report, candidate: Candidate | undefined, address: string | undefined, location: GeoPoint | null) {
+  const where = [address, location ? `${location.lat.toFixed(5)}, ${location.lng.toFixed(5)}` : null]
+    .filter(Boolean)
+    .join(' · ');
+  return [
+    report.title_en,
+    '',
+    report.description_en,
+    '',
+    `Category: ${candidate?.display_name ?? report.category}`,
+    report.agency ? `Usually handled by: ${report.agency}` : null,
+    where ? `Location: ${where}` : null,
+  ]
+    .filter((line) => line !== null)
+    .join('\n');
 }
 
 function today() {
@@ -119,9 +137,23 @@ function ContextCard({
   );
 }
 
-function ReportCard({ report }: { report: Report }) {
+function ReportCard({ report, copyText }: { report: Report; copyText: string }) {
   const [showEnglish, setShowEnglish] = useState(false);
+  const [copied, setCopied] = useState(false);
   const translated = report.language !== 'en';
+
+  useEffect(() => {
+    if (!copied) {
+      return;
+    }
+    const timer = setTimeout(() => setCopied(false), 2500);
+    return () => clearTimeout(timer);
+  }, [copied]);
+
+  async function copy() {
+    await Clipboard.setStringAsync(copyText);
+    setCopied(true);
+  }
 
   if (report.emergency) {
     return (
@@ -151,10 +183,13 @@ function ReportCard({ report }: { report: Report }) {
           <Text style={styles.body}>{report.description_en}</Text>
         </View>
       ) : null}
+      <Pressable style={styles.primaryButton} onPress={copy} accessibilityLabel="Copy the English report for the city">
+        <Text style={styles.primaryButtonText}>{copied ? 'Copied' : 'Copy report (English, for the city)'}</Text>
+      </Pressable>
       <Pressable style={styles.secondaryButton} onPress={() => Linking.openURL('https://sf311.org')}>
         <Text style={styles.secondaryButtonText}>Open sf311.org</Text>
       </Pressable>
-      <Text style={styles.muted}>We never file for you. Copy this into sf311.org or the SF311 app.</Text>
+      <Text style={styles.muted}>We never file for you. Paste the report into sf311.org or the SF311 app.</Text>
     </View>
   );
 }
@@ -304,7 +339,16 @@ export default function ResultScreen() {
       {context ? <ContextCard context={context} duplicate={duplicate} onDuplicate={setDuplicate} /> : null}
 
       {report ? (
-        <ReportCard report={report} />
+        <ReportCard
+          report={report}
+          copyText={reportText(
+            report,
+            classification.top_k.find((candidate) => candidate.label === report.category) ??
+              classification.top_k.find((candidate) => candidate.label === selected),
+            params.address,
+            location,
+          )}
+        />
       ) : (
         <Pressable
           style={[styles.primaryButton, (!canWrite || reportState === 'loading') && styles.disabled]}
