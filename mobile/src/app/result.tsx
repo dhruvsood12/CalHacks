@@ -414,7 +414,7 @@ export default function ResultScreen() {
               ? `${params.address}${params.source ? ` · ${SOURCE_LABEL[params.source]}` : ''}`
               : 'No location'}
           </Text>
-          {classification.used_location ? <Text style={styles.muted}>Location helped the prediction</Text> : null}
+          {classification.used_location ? <Text style={styles.muted}>Location used as a second signal</Text> : null}
         </View>
       </View>
 
