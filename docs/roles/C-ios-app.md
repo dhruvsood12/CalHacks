@@ -27,7 +27,7 @@ You build the only thing judges touch: a native mobile app that runs on iPhone a
    - Camera / photo library.
    - **Location with zero taps:**
      - Camera photos use `expo-location` (`getCurrentPositionAsync`), requested once at capture, with accuracy shown. Camera EXIF has no GPS on iOS, so this is the only source for camera shots.
-     - **Library photos use the photo's own location:** `expo-media-library` `getAssetInfoAsync(assetId)` → `location` (needs photo-library read access; `assetId` is null with limited access, or on Android when the user browses files), else the GPS tags from `expo-image-picker` with `exif: true`. Verify both platforms in C2.
+     - **Library photos use the photo's own location:** the GPS tags `expo-image-picker` returns with `exif: true`. Verified on iOS in C2: they come through with limited photo access, so no photo-library permission and no `expo-media-library`.
    - Reverse-geocode with `Location.reverseGeocodeAsync` (`expo-location`): "📍 3601 Lyon St (±8 m)". Tap to adjust on a map.
    - **Manual pin only as a fallback.** That's a direct contrast with SF311, which makes the resident place a pin.
    - Language picker. Default to the device language; offer at least English, Español, 中文, Filipino, Tiếng Việt, Русский.
