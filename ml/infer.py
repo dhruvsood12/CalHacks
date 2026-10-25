@@ -43,11 +43,16 @@ class Predictor:
             members.append((model, transform))
         return cls(meta, members, device)
 
+    @staticmethod
+    def _open(item):
+        """A path (eval) or an already-decoded PIL image (the API receives bytes, not files)."""
+        return item.convert("RGB") if isinstance(item, Image.Image) else Image.open(item).convert("RGB")
+
     @torch.no_grad()
     def _member_logits(self, model, transform, paths, batch):
         out = []
         for i in range(0, len(paths), batch):
-            x = torch.stack([transform(Image.open(p).convert("RGB")) for p in paths[i:i + batch]]).to(self.device)
+            x = torch.stack([transform(self._open(p)) for p in paths[i:i + batch]]).to(self.device)
             with torch.autocast(self.device.type, dtype=torch.bfloat16, enabled=self.device.type == "cuda"):
                 z = model(x)
             if self.meta.get("tta_hflip"):
@@ -57,7 +62,7 @@ class Predictor:
         return torch.cat(out)
 
     def logits(self, paths, batch=64):
-        paths = [str(p) for p in paths]
+        paths = [p if isinstance(p, Image.Image) else str(p) for p in paths]
         if len(self.members) == 1:
             model, transform = self.members[0]
             return self._member_logits(model, transform, paths, batch).numpy()
