@@ -30,11 +30,13 @@ Demo-first: about 2:15 of app, 30 s of how it works and why it matters, 15 s for
 
 **Cut list if over time:** drop Copy report (1:50) and the architecture card (keep only the narration). Never cut the map update.
 
-**Backup footage:** `run1.mp4` is the 3:21 simulator run on the **mock** API (it shows the "Mock data" badge and the Spanish example report). Use it only labelled as a backup or rehearsal. Never present it as a real model or Claude result.
+**Backup footage (mock API, simulator):** use these only labelled as a backup or rehearsal. Never present them as a real model or Claude result.
+- `mock-backup.mp4` (2:15) is on the latest build. It shows the "Mock data" badge, a report titled "Mock report: … no Claude call was made", and a map card whose Claude row reads "Mock data: no Claude call was made".
+- `run1.mp4` (3:21) is from an older build whose mock showed a canned Spanish example report. Prefer `mock-backup.mp4`.
 
 ## Part 2: recording checklist
 - [ ] `curl -s https://<tunnel>/health` shows a real `model_version` (not `stub`) and `report_ready: true`. If not, record on mock and say so on screen.
-- [ ] `cd convex && npm run seed -- '{"lat":..,"lng":..,"address":".."}'` with the demo photo's coordinates. The map shows 7 reports and a **3** badge.
+- [ ] `cd convex && npm run seed -- '{"lat":..,"lng":..,"address":"..","category":"<label the model gives the demo photo>"}'`. The map shows 7 reports and a **3** badge, in the same category as the demo photo.
 - [ ] Phone: Do Not Disturb on, brightness up, Location and Photos already granted to Expo Go.
 - [ ] Demo photo taken today with Location on. No people, faces, plates or encampments. Not a dataset image.
 - [ ] One full dry run, then re-seed so the badge starts at 3.
@@ -74,7 +76,7 @@ cd mobile && npx expo start --tunnel --clear
 | 3 | Library + EXIF | **Choose photo** → a photo taken with Location on; the location line says "<address> · from the photo" |
 | 4 | Real classification | Result screen has **no** "Mock data" badge; `/health` showed a non-stub `model_version` |
 | 5 | Real city context | "Already reported?" card or "No open reports of this kind nearby", plus a fix-time line |
-| 6 | Real Claude report | Report text matches your photo (not the canned "Bache grande … 3601 Lyon St" example), in the chosen language |
+| 6 | Real Claude report | Report text describes your photo in the chosen language, not "Mock report: … no Claude call was made" |
 | 7 | Copy report | Paste into Notes: English title, description, category, agency, location |
 | 8 | Add to map | Button changes to "On the live map · See it" |
 | 9 | Live update | Map count goes up by one without pulling to refresh. Also try it with the simulator open on the Map tab; the pin should appear there too |
@@ -85,7 +87,7 @@ cd mobile && npx expo start --tunnel --clear
 ### Setup (15 minutes before)
 1. **Check the API:** `curl -s https://<tunnel>/health`. `model_version` must not be `stub` to claim the trained model, and `report_ready` must be `true` for Claude reports.
 2. **Demo photo** with GPS (Part 3, step 4).
-3. **Seed the map around that spot:** `cd convex && npm run seed -- '{"lat":..,"lng":..,"address":".."}'`. Re-running also clears earlier mock, stub and rehearsal rows.
+3. **Seed the map around that spot, in the photo's category** (check it once in the dry run): `cd convex && npm run seed -- '{"lat":..,"lng":..,"address":"..","category":"pavement_defect"}'`. Re-running also clears earlier mock, stub and rehearsal rows.
 4. **App config and Expo** as in Part 3.
 5. **Run the path once,** then re-seed.
 
@@ -110,7 +112,7 @@ cd mobile && npx expo start --tunnel --clear
 | 5 | `/classify` slow or down | "Couldn't identify this photo … didn't answer within 10 s" | **Retry**. If it stays down, restart Expo without `EXPO_PUBLIC_API_BASE_URL` (mock data, badge visible; about 30 s) |
 | 6 | `/context` slow or down | "Couldn't check whether this was already reported" | **Retry**, or **Continue without the check**. The duplicate story is still on the map |
 | 7 | `/report` (Claude) fails or is slow | "The report writer didn't answer" with the status; a real report can take about 10–20 s | **Try writing the report again**; photo, category and choices are kept. If it still fails, show the seeded cluster's why card |
-| 8 | Different category from the model | New pin on its own (count 1) | Clusters merge only the same category. Pick the matching card, or show the seeded cluster |
+| 8 | Different category from the model | New pin on its own (count 1) | Clusters merge only the same category. Re-seed with `"category"` set to what the model returned, or pick the matching card |
 | 9 | Photo far from the seed | New pin isn't grouped | Re-seed with the photo's coordinates |
 | 10 | Convex unreachable | Map says "Connecting to the live map…" | Needs internet; fall back to the video |
 | 11 | Reverse geocoding slow | Coordinates instead of an address | Fine; the source label is still shown |

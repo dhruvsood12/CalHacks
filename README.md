@@ -39,7 +39,7 @@ npx convex dev
 ```bash
 cd convex && npm run seed
 ```
-This loads 7 demo reports, including a 3-report duplicate cluster on Mission St. It is safe to re-run and replaces only seed and rehearsal rows; `npm run seed:clear` removes them.
+This loads 7 demo reports, including a 3-report duplicate cluster on Mission St. Pass `-- '{"lat":..,"lng":..,"address":"..","category":"pavement_defect"}'` to move the cluster and set its category. It is safe to re-run and replaces only seed and rehearsal rows; `npm run seed:clear` removes them.
 
 **App (Expo, runs in Expo Go)**
 ```bash
@@ -58,7 +58,7 @@ Put the Convex URL in `mobile/.env` as `EXPO_PUBLIC_CONVEX_URL`, and the API URL
 | Map data in the demo | **Seeded**: 7 reports marked `model_version: demo-seed`, shown as "Seeded demo report" on the pin card |
 | Classifier | Trained in `ml/`. Until the trained model is loaded, the API serves a **stub** classifier (`model_version: stub`) |
 | Duplicate check and fix times | DataSF queries in `serve/citydata.py`. Fix times may come from a cached evidence file |
-| Claude report | `serve/claude_report.py`. In mock mode the report is a fixed contract example, and map rows are marked `mock` |
+| Claude report | `serve/claude_report.py`. In mock mode the report is a labelled placeholder ("Mock data: no Claude call was made"), and map rows are marked `mock` |
 | Filing to SF 311 | Never. The app links to sf311.org; a person decides |
 
 **Accuracy:** read from `reports/final_eval.json` once the sealed test run is committed. No number in this README is typed by hand.

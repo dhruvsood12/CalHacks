@@ -92,7 +92,7 @@ Reporting a pothole in San Francisco means finding the right category among doze
 - Video: **TODO** (YouTube, public or unlisted, ≤ 3:00)
 
 ## Images (at least one is required)
-Use real-API screenshots if available. Otherwise use these and **caption them as "mock API"**, since they show the "Mock data" badge or the example report. They are on branch `c/pr-evidence`, folder `pr-evidence/`:
+Use real-API screenshots if available. Otherwise use these and **caption them as "mock API"**, since they show the "Mock data" badge or a mock report. They are on branch `c/pr-evidence`, folder `pr-evidence/`:
 1. `c1-capture.png`: capture with location provenance
 2. `d-run-picked.png`: "2001 Mission St (±8 m) · from the photo"
 3. `c1-context-report.png`: Already reported? card plus report (mock)
