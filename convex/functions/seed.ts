@@ -2,7 +2,7 @@ import { v } from 'convex/values';
 import { internalMutation } from './_generated/server';
 
 export const SEED_MODEL_VERSION = 'demo-seed';
-const TEST_MODEL_VERSIONS = [SEED_MODEL_VERSION, 'live-check'];
+const TEST_MODEL_VERSIONS = [SEED_MODEL_VERSION, 'live-check', 'mock', 'stub'];
 
 type SeedReport = {
   category: string;
@@ -15,6 +15,7 @@ type SeedReport = {
   language: string;
   title_en: string;
   model_label: string;
+  submitted_label: string;
   confidence: number;
   chosen_by: 'model' | 'resident';
   agrees_with_classifier: boolean;
@@ -37,6 +38,7 @@ const REPORTS: SeedReport[] = [
     location_source: 'photo',
     language: 'es',
     model_label: 'pavement_defect',
+    submitted_label: 'pavement_defect',
     confidence: 0.88,
     chosen_by: 'model',
     agrees_with_classifier: true,
@@ -50,6 +52,7 @@ const REPORTS: SeedReport[] = [
     location_source: 'gps',
     language: 'zh-Hans',
     model_label: 'pavement_defect',
+    submitted_label: 'pavement_defect',
     confidence: 0.79,
     chosen_by: 'model',
     agrees_with_classifier: true,
@@ -63,9 +66,10 @@ const REPORTS: SeedReport[] = [
     location_source: 'typed',
     language: 'en',
     model_label: 'sidewalk_defect',
+    submitted_label: 'pavement_defect',
     confidence: 0.41,
     chosen_by: 'resident',
-    agrees_with_classifier: false,
+    agrees_with_classifier: true,
     city_open_nearby: 1,
   },
   {
@@ -79,6 +83,7 @@ const REPORTS: SeedReport[] = [
     language: 'fil',
     title_en: 'Sidewalk blocked by construction fencing',
     model_label: 'blocked_sidewalk',
+    submitted_label: 'blocked_sidewalk',
     confidence: 0.72,
     chosen_by: 'model',
     agrees_with_classifier: true,
@@ -95,6 +100,7 @@ const REPORTS: SeedReport[] = [
     language: 'vi',
     title_en: 'Streetlight out at the corner',
     model_label: 'streetlight',
+    submitted_label: 'streetlight',
     confidence: 0.91,
     chosen_by: 'model',
     agrees_with_classifier: true,
@@ -111,6 +117,7 @@ const REPORTS: SeedReport[] = [
     language: 'en',
     title_en: 'Graffiti on a utility box',
     model_label: 'graffiti',
+    submitted_label: 'graffiti',
     confidence: 0.95,
     chosen_by: 'model',
     agrees_with_classifier: true,
@@ -127,6 +134,7 @@ const REPORTS: SeedReport[] = [
     language: 'ru',
     title_en: 'Stop sign knocked down',
     model_label: 'traffic_sign',
+    submitted_label: 'traffic_sign',
     confidence: 0.83,
     chosen_by: 'model',
     agrees_with_classifier: true,
