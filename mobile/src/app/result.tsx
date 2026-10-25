@@ -1,6 +1,6 @@
 import * as Clipboard from 'expo-clipboard';
 import { useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { ActivityIndicator, Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import {
   Candidate,
@@ -13,6 +13,9 @@ import {
   api,
   usingMock,
 } from '../api';
+import { categoryInfo } from '../categories';
+import { AddToMap } from '../components/AddToMap';
+import { NewReport, convex } from '../live';
 import { LocationSource, SOURCE_LABEL } from '../location';
 import { preparePhoto } from '../photo';
 import { colors } from '../theme';
@@ -50,6 +53,46 @@ function reportText(report: Report, candidate: Candidate | undefined, address: s
   ]
     .filter((line) => line !== null)
     .join('\n');
+}
+
+function mapDraft(
+  report: Report,
+  classification: Classification,
+  selected: string,
+  location: GeoPoint,
+  address: string | undefined,
+  source: LocationSource,
+  context: CityContext | null,
+): NewReport {
+  const picked = classification.top_k.find((candidate) => candidate.label === selected);
+  const reported = classification.top_k.find((candidate) => candidate.label === report.category);
+  return {
+    category: report.category,
+    display_name: categoryInfo(report.category)?.display_name ?? reported?.display_name ?? report.category,
+    agency: report.agency,
+    lat: location.lat,
+    lng: location.lng,
+    address: address || null,
+    location_source: source,
+    language: report.language,
+    title_en: report.title_en,
+    model_label: selected,
+    confidence: picked?.prob ?? 0,
+    chosen_by: !classification.abstain && selected === classification.top_k[0].label ? 'model' : 'resident',
+    agrees_with_classifier: report.agrees_with_classifier,
+    model_version: classification.model_version,
+    city_open_nearby: context?.nearby_open.length ?? 0,
+  };
+}
+
+function MapAction({ draft, blocked }: { draft: NewReport | null; blocked: string | null }) {
+  if (!convex) {
+    return null;
+  }
+  if (!draft) {
+    return <Text style={styles.muted}>{blocked}</Text>;
+  }
+  return <AddToMap draft={draft} />;
 }
 
 function today() {
@@ -137,7 +180,15 @@ function ContextCard({
   );
 }
 
-function ReportCard({ report, copyText }: { report: Report; copyText: string }) {
+function ReportCard({
+  report,
+  copyText,
+  mapAction,
+}: {
+  report: Report;
+  copyText: string;
+  mapAction: ReactNode;
+}) {
   const [showEnglish, setShowEnglish] = useState(false);
   const [copied, setCopied] = useState(false);
   const translated = report.language !== 'en';
@@ -189,6 +240,7 @@ function ReportCard({ report, copyText }: { report: Report; copyText: string }) 
       <Pressable style={styles.secondaryButton} onPress={() => Linking.openURL('https://sf311.org')}>
         <Text style={styles.secondaryButtonText}>Open sf311.org</Text>
       </Pressable>
+      {mapAction}
       <Text style={styles.muted}>We never file for you. Paste the report into sf311.org or the SF311 app.</Text>
     </View>
   );
@@ -348,6 +400,20 @@ export default function ResultScreen() {
             params.address,
             location,
           )}
+          mapAction={
+            <MapAction
+              draft={
+                location && selected && report.category !== 'not_a_311_issue'
+                  ? mapDraft(report, classification, selected, location, params.address, params.source ?? 'gps', context)
+                  : null
+              }
+              blocked={
+                report.category === 'not_a_311_issue'
+                  ? "This doesn't look like a city issue, so it isn't added to the map."
+                  : 'Add a location with a map point to put this on the live map.'
+              }
+            />
+          }
         />
       ) : (
         <Pressable

@@ -10,4 +10,8 @@ export const colors = {
   warningSoft: '#fff4d6',
   danger: '#c62828',
   dangerSoft: '#fdecea',
+  authorityPW: '#2a78d6',
+  authorityMTA: '#eb6834',
+  authorityPUC: '#1baf7a',
+  authorityOther: '#6e6e73',
 };
