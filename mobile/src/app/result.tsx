@@ -74,7 +74,7 @@ function mapDraft(
   source: LocationSource,
   context: CityContext | null,
 ): NewReport {
-  const picked = classification.top_k.find((candidate) => candidate.label === selected);
+  const top = classification.top_k[0];
   const reported = classification.top_k.find((candidate) => candidate.label === report.category);
   return {
     category: report.category,
@@ -86,11 +86,12 @@ function mapDraft(
     location_source: source,
     language: report.language,
     title_en: report.title_en.slice(0, 200),
-    model_label: selected,
-    confidence: picked?.prob ?? 0,
-    chosen_by: !classification.abstain && selected === classification.top_k[0].label ? 'model' : 'resident',
+    model_label: top.label,
+    submitted_label: selected,
+    confidence: top.prob,
+    chosen_by: !classification.abstain && selected === top.label ? 'model' : 'resident',
     agrees_with_classifier: report.category === selected,
-    model_version: classification.model_version,
+    model_version: usingMock ? 'mock' : classification.model_version,
     city_open_nearby: context?.nearby_open.length ?? 0,
   };
 }
@@ -273,6 +274,7 @@ export default function ResultScreen() {
   const [duplicate, setDuplicate] = useState<Duplicate>(null);
   const [report, setReport] = useState<Report | null>(null);
   const [reportState, setReportState] = useState<'idle' | 'loading' | 'error'>('idle');
+  const [reportError, setReportError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -350,10 +352,12 @@ export default function ResultScreen() {
       user_note: userNote || null,
     };
     setReportState('loading');
+    setReportError(null);
     try {
       setReport(await api.report(request));
       setReportState('idle');
-    } catch {
+    } catch (e) {
+      setReportError(e instanceof Error ? e.message : String(e));
       setReportState('error');
     }
   }
@@ -395,7 +399,9 @@ export default function ResultScreen() {
       ? 'Checking for existing reports…'
       : contextState === 'error' || (hasDuplicate && !duplicate)
         ? 'Choose an option above'
-        : 'Write my report';
+        : reportState === 'error'
+          ? 'Try writing the report again'
+          : 'Write my report';
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content} contentInsetAdjustmentBehavior="automatic">
@@ -495,7 +501,14 @@ export default function ResultScreen() {
         </Pressable>
       )}
       {reportState === 'error' ? (
-        <Text style={styles.errorText}>The report writer is unavailable. Your category and agency above are still right to use.</Text>
+        <View style={[styles.card, styles.unsure]}>
+          <Text style={styles.cardTitle}>The report writer didn't answer</Text>
+          {reportError ? <Text style={styles.muted}>{reportError}</Text> : null}
+          <Text style={styles.body}>
+            Your photo, category and choices are kept. Try again, or use the category and agency above to file on
+            sf311.org.
+          </Text>
+        </View>
       ) : null}
     </ScrollView>
   );
