@@ -1,4 +1,5 @@
-import { v } from 'convex/values';
+import { ConvexError, v } from 'convex/values';
+import categories from '../../contracts/categories.json';
 import { internalMutation } from './_generated/server';
 
 export const SEED_MODEL_VERSION = 'demo-seed';
@@ -145,8 +146,19 @@ const REPORTS: SeedReport[] = [
 const MISSION = { lat: 37.76512, lng: -122.41948 };
 
 export const demo = internalMutation({
-  args: { lat: v.optional(v.number()), lng: v.optional(v.number()), address: v.optional(v.string()) },
+  args: {
+    lat: v.optional(v.number()),
+    lng: v.optional(v.number()),
+    address: v.optional(v.string()),
+    category: v.optional(v.string()),
+  },
   handler: async (ctx, args) => {
+    const picked = args.category
+      ? categories.classes.find((c: { label: string }) => c.label === args.category)
+      : null;
+    if (args.category && !picked) {
+      throw new ConvexError(`unknown category ${args.category}`);
+    }
     const dLat = (args.lat ?? MISSION.lat) - MISSION.lat;
     const dLng = (args.lng ?? MISSION.lng) - MISSION.lng;
     const moved = dLat !== 0 || dLng !== 0;
@@ -165,6 +177,16 @@ export const demo = internalMutation({
         lat: inCluster ? report.lat + dLat : report.lat,
         lng: inCluster ? report.lng + dLng : report.lng,
         address: inCluster && moved ? args.address ?? null : report.address,
+        ...(inCluster && picked
+          ? {
+              category: picked.label,
+              display_name: picked.display_name,
+              agency: picked.primary_agency,
+              model_label: picked.label,
+              submitted_label: picked.label,
+              title_en: `${picked.display_name} (seeded demo report)`,
+            }
+          : {}),
         model_version: SEED_MODEL_VERSION,
       });
     }
