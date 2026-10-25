@@ -306,7 +306,11 @@ export default function ResultScreen() {
             <ActivityIndicator color="#fff" />
           ) : (
             <Text style={styles.primaryButtonText}>
-              {needsChoice ? 'Pick a category first' : 'Write my report'}
+              {needsChoice
+                ? 'Pick a category first'
+                : hasDuplicate && !duplicate
+                  ? 'Choose an option above'
+                  : 'Write my report'}
             </Text>
           )}
         </Pressable>
