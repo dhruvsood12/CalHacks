@@ -131,9 +131,25 @@ def test_abstain_threshold_meets_target_with_margin():
     below = conf[conf < res["threshold"]]
     if len(below):
         assert M.selective(probs, labels, below[-1])["selective_accuracy_lower95"] < 0.90
-    # unreachable target -> always abstain
+    assert res["always_abstain"] is False
+    # unreachable target -> always abstain, explicit flag, no NaNs
     bad = M.abstain_threshold(M.softmax(np.zeros((50, C))), np.zeros(50, dtype=int), target=0.99)
-    assert bad["threshold"] == 1.0 and bad["coverage"] == 0.0
+    assert bad["threshold"] == 1.0 and bad["coverage"] == 0.0 and bad["always_abstain"] is True
+    assert bad["selective_accuracy"] is None
+
+
+def test_no_answer_predictions_never_credit_a_class():
+    labels = np.array([0, 0, 1, 1, 2])
+    preds = np.array([0, -1, 1, -1, -1])  # two right, three "no answer"
+    cm = M.confusion_matrix_na(preds, labels)
+    assert cm.shape == (C, C + 1) and cm[:, C].sum() == 3 and cm[0, 0] == 1 and cm[1, 1] == 1
+    assert M.top1_na(preds, labels) == pytest.approx(2 / 5)
+    # class 0: p=1, r=0.5 -> f1 2/3; class 1 same; class 2: r=0 -> 0; others 0
+    assert M.macro_f1_na(preds, labels) == pytest.approx((2 / 3 + 2 / 3) / C)
+    # no refusals: identical to the plain versions
+    full = np.array([0, 0, 1, 2, 2])
+    assert M.macro_f1_na(full, labels) == pytest.approx(M.macro_f1(full, labels))
+    assert M.top1_na(full, labels) == pytest.approx(M.top_k_accuracy(np.eye(C)[full], labels, 1))
 
 
 def test_cluster_bootstrap_ci_contains_point_estimate_and_is_reproducible():
