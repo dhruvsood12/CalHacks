@@ -18,10 +18,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 MAX_MB = 20
-CODE_EXT = {".py", ".ipynb", ".ts", ".tsx", ".js", ".jsx", ".mjs", ".sh"}
+CODE_EXT = {".py", ".ipynb", ".ts", ".tsx", ".js", ".jsx", ".mjs", ".sh", ".swift"}
 TEST_ACCESS_ALLOWLIST = {
-    "ml/final_eval.py",
-    "serve/baseline/claude_zeroshot.py",
+    "eval/final_eval.py",
+    "eval/claude_zeroshot.py",
 }
 TEST_PATTERNS = re.compile(r"test\.csv|claude_baseline_ids")
 SECRET_PATTERNS = [
@@ -61,6 +61,7 @@ def check_contracts():
         "classify.response.json": "classify.response.schema.json",
         "classify.response.abstain.json": "classify.response.schema.json",
         "report.response.json": "report.response.schema.json",
+        "model_meta.json": "model_meta.schema.json",
     }
     cats = json.loads((ROOT / "contracts" / "categories.json").read_text())["classes"]
     labels = {c["label"] for c in cats}

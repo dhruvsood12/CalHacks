@@ -25,3 +25,9 @@ dist/
 .vite/
 .DS_Store
 *.log
+
+# iOS / Xcode
+xcuserdata/
+DerivedData/
+*.xcuserstate
+ios/**/Config.local.xcconfig

@@ -1,0 +1,10 @@
+numpy>=1.26
+scipy>=1.11
+scikit-learn>=1.4
+pandas>=2.0
+matplotlib>=3.8
+pillow>=10.0
+anthropic
+pydantic>=2.0
+jsonschema>=4.18
+pytest>=8.0

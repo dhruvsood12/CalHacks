@@ -4,29 +4,32 @@
 
 This is the source of truth. If something here is wrong, fix it with a PR. Don't work around it.
 
+**Tasks live in GitHub Issues** (labels `role:A` / `role:B` / `role:C`, milestones G0–G5). Start with the 📌 START HERE issue.
+
 ---
 
 ## 1. The goal (what exists at 9 AM)
 
-**One sentence:** A resident snaps a photo of a street problem. Our fine-tuned vision model, trained on about 30k real SF 311 reports, names the problem and the city agency that handles it. Claude then writes a ready-to-file 311 report in the resident's own language.
+**One sentence:** On an iPhone, a resident photographs a street problem. Our vision model, fine-tuned on about 30k real SF 311 photo reports, names the problem and the city agency that handles it, or says it isn't sure. Claude then writes a ready-to-file report in the resident's own language.
+
+**Why it matters** (details and sources in [docs/WHY.md](docs/WHY.md)): today the resident has to find the right category in a menu, and the filing flow is English-first. We turn "what is this, and who fixes it?" into a photo.
 
 **The demo (3-minute pitch, about 60 s of it live):**
-1. Open the app on a phone and take or upload a photo (a pothole, a dumped mattress, a broken streetlight).
-2. In under a second: "Pothole or street pavement damage → Public Works, Street and Sewer Repair, 91% confident", plus the top 3 alternatives.
-3. Pick a language (e.g. Español). Claude writes the report: title, description, what happens next. A copy in English goes to the city.
-4. Low-confidence or unclear photo: the model **abstains** and Claude gives a second opinion. Nobody gets a confident wrong answer.
-5. The live map (Convex) shows the report appear in real time.
-6. One slide of numbers, every one read from a committed JSON report on a test set we never trained or tuned on:
-   - our model against a frozen-feature baseline and against Claude zero-shot, with 95% confidence intervals
-   - per-class F1
-   - accuracy at the abstention threshold
+1. Open the app on an iPhone and take or choose a photo (a pothole, a dumped mattress, a broken streetlight).
+2. In about a second: "Pothole or street pavement damage → Public Works, Street and Sewer Repair, 91%", plus two alternatives.
+3. Pick Español. Claude writes the report: title, description, what happens next. An English copy goes to the city.
+4. An ambiguous photo: the model says **"not sure"**, shows its best guesses, and Claude gives a second opinion. No confident wrong answers.
+5. The live map (Convex) shows the new pin appear in real time.
+6. One results slide, every number read from a committed `reports/*.json`, on a test set nobody trained or tuned on:
+   - our model against the frozen-feature baseline and Claude zero-shot, with 95% confidence intervals
+   - accuracy when the model is confident, and how often it is confident
 
-**What "the model performs well" means. These are the success criteria, and they're measured, not assumed:**
-- **Top-1 and macro-F1** on the locked test set clearly beat the frozen linear probe. Report the confidence intervals, and no claims without them.
-- **Top-3 accuracy** is high enough that the right category is almost always on screen.
-- **Selective accuracy:** a confidence threshold chosen on val yields ≥ 90% accuracy on the test images the model accepts, and we report what fraction it accepts.
-- **Against Claude zero-shot** on the same frozen test subset: either we win (domain-specific SF taxonomy beats general knowledge) or the cascade (model, plus Claude when it abstains) wins. Both are honest, interesting results. We report whichever is true.
-- **Latency:** model under 200 ms per photo. Claude report streams in a few seconds.
+**Success criteria (measured, not assumed):**
+- **Fine-tuned vs frozen features:** the fine-tuned model beats the best frozen-feature probe on test macro-F1. **Report the gap with a CI**; published precedent says to expect a few points, not a landslide (WHY §2.6).
+- **Top-3 accuracy** high enough that the right category is almost always on screen.
+- **Selective accuracy:** at the abstain threshold, accepted test predictions are ≈ 90% correct (the threshold is set with a statistical safety margin on val, §3.5). Coverage is reported.
+- **Against Claude zero-shot** (given the same category definitions and a few training examples, so the comparison is fair): either the model wins or the cascade (model, plus Claude when it abstains) wins. We report whichever is true.
+- **Latency:** `/classify` under 300 ms on the server. The Claude report arrives in a few seconds.
 
 ---
 
@@ -34,81 +37,98 @@ This is the source of truth. If something here is wrong, fix it with a PR. Don't
 
 | Asset | State |
 |---|---|
-| Dataset | **29,571 photos, 17 classes**, from DataSF 311 Cases ([dataset](https://data.sf.gov/City-Infrastructure/311-Cases/vw6y-z8j6)). Requests from Oct 2024 to Sep 2026, mobile-app photos only. |
-| Splits | **train 20,947 / val 4,252 / test 4,372**, about 1,190–1,255 / 240–257 / 257–258 per class. Frozen: sha256 values are in `data/SPLIT_MANIFEST.json`. |
-| Leakage audit | `python3 scripts/verify_data.py --images`: **15/15 checks pass** (see §4) |
-| Images | ~5.1 GB, **not in git**. Nirvaan has them. Others pull subsets with `scripts/fetch_images.py`. |
-| Category contract | `contracts/categories.json`: label ↔ index ↔ display name ↔ city agency |
+| Dataset | **29,571 photos, 17 classes**, from DataSF 311 Cases ([dataset](https://data.sf.gov/City-Infrastructure/311-Cases/vw6y-z8j6)). Oct 2024 to Sep 2026, mobile-app photos. |
+| Splits | **train 20,947 / val 4,252 / test 4,372**, about 1,190–1,255 / 240–257 / 257–258 per class. sha256 frozen in `data/SPLIT_MANIFEST.json`. |
+| Leakage audit | `python3 scripts/verify_data.py --images`: **15/15 checks pass** (§4) |
+| Pre-registered evaluation subsets | `reports/claude_baseline_ids.csv` (1,020 test) and `reports/claude_prompt_dev_ids.csv` (340 val), committed before any model existed |
+| Images | 5.1 GB, **not in git**. Nirvaan has them. Others pull subsets with `scripts/fetch_images.py` (sha1-verified). |
+| Contracts | `contracts/`: categories ↔ agencies ↔ real-world priors, API schemas, the A→B predictor interface |
 
-Known data facts that shape the architecture:
-- **Label noise is real.** Residents pick the category themselves. Some photos are taken after the problem was gone (encampments), and some show two problems at once. Expect a top-1 ceiling well below 100%.
-- **Fine-grained, overlapping classes.** Three car classes (parked on sidewalk, blocking driveway, abandoned) and four ground-surface classes (sidewalk, pavement, curb ramp, vent cover). The difference is context and texture, not object identity.
-- **Phone photos:** mostly 576×768 portrait, outdoors, varied light.
-- **Aspect-ratio shortcut found:** 20% of `illegal_posting` photos are square, against 2–4% in other classes. That's why we **crop to a square and never pad** (§3.4).
-- **Not a deployment prior:** the classes are balanced, but in the real stream of photo reports across our 17 classes, garbage is **52.5%** and sewer vent covers 0.4% (counts are in `contracts/categories.json` → `real_prior`). Real-world accuracy will differ, so we report a prior-weighted number too (§3.6).
+**Is there enough data?** Yes, by a wide margin for fine-tuning: about **1,230 training images per class**. Published fine-grained benchmarks fine-tune ViT-B to strong accuracy with **~40 images per class** (Stanford Cars: 196 classes, ~8k images). The limiting factor here is **label noise, not quantity**. See WHY §2.6.
+
+**Known data facts that shape the architecture:**
+- **Crowd label noise.** Residents pick the category, some photos are taken after the problem was gone, and some show two problems.
+- **Fine-grained, overlapping classes:**
+  - three car classes: parked on sidewalk, blocking driveway, abandoned
+  - four ground-surface classes: sidewalk, pavement, curb ramp, sewer vent cover
+- **Phone photos.** 576×768 portrait for about 70% of images, with some landscape and some square.
+- **Aspect-ratio shortcut.** 20% of `illegal_posting` photos are square, against 2–4% in other classes. So every image is **cropped** to one fixed shape: never padded, never squashed.
+- **Balanced on purpose.** The real world is not: garbage is **52.5%** of real photo reports across these classes (`contracts/categories.json` → `real_prior`). We also report a prior-weighted number.
 
 ---
 
-## 3. Model architecture (decision and reasons)
+## 3. Model architecture
 
 ### 3.1 Task framing
-- **Input:** RGB pixels only. **No metadata** (agency, neighborhood, time, address). `agency_responsible` is derived from the label, so feeding it in would leak the answer.
-- **Output:** a softmax over 17 classes, calibrated, plus an **abstain** decision.
-- **Single-label training, top-3 at inference.** The UI shows the top 3 and the user confirms. That's how a single-label model handles multi-issue photos honestly.
+- **Input:** RGB pixels only. **No metadata.** `agency_responsible` is derived from the label, so feeding it in would leak the answer.
+- **Output:** 17-way softmax, calibrated, plus an **abstain** decision. Single-label training, top-3 at inference: the user confirms, which handles photos showing more than one problem.
 
-### 3.2 Why fine-tune a pretrained vision backbone (and not the alternatives)
+### 3.2 Why fine-tune pretrained backbones (and not the alternatives)
 | Option | Verdict |
 |---|---|
-| Train a CNN from scratch | No. About 1.2k images per class is far too few, and it won't converge in our time window. |
-| **Fine-tune a pretrained foundation backbone (chosen)** | Best accuracy per GPU-hour. Strong priors for street scenes, text in images (postings, signs) and textures (cracks). It trains in about 15–40 minutes. |
-| Fine-tune a vision-language model (LoRA) to generate text | Slower, harder to evaluate, and more ways to fail overnight. Claude already covers the language side. |
-| Claude zero-shot only | No trained model, and it doesn't know SF's own category conventions. We keep it as **a baseline and as the fallback when the model abstains**, not as the classifier. |
+| Train from scratch | No. Too little data per class, and no time. |
+| **Fine-tune pretrained vision backbones (chosen)** | Standard practice for fine-grained classification. 1,230 images per class is far above what published fine-grained benchmarks need. |
+| Frozen features + linear probe only | It's our **baseline**. Fine-tuning reliably beats it on fine-grained tasks (VPT table: Stanford Cars 51 → 85). |
+| LoRA / prompt-tuning (PEFT) | Matches full fine-tuning in low-data settings; no evidence it beats full fine-tuning at our scale. Skip it. |
+| Fine-tune a VLM to generate text | Slower, harder to evaluate, more ways to fail. Claude covers the language side. |
+| Claude zero-shot only | Doesn't know SF's category conventions. General VLMs trail specialised classifiers on classification. Kept as **a baseline and the fallback when the model abstains**. |
 
-### 3.3 Backbone selection: decided by measurement, not opinion
-A frozen-feature **linear-probe bake-off** with logistic regression on cached embeddings. Fit on train, **score on val only**. Takes about 10 minutes per backbone.
+### 3.3 The three backbones (best open option in each family, all one-line downloads)
+Verified on Hugging Face: all three are **Apache-2.0, ungated, available in `timm`**.
 
-| Candidate (timm name, verify with `timm.list_models(pretrained=True)`) | Why it's in the running |
-|---|---|
-| `vit_base_patch16_siglip_384.v2_webli` (SigLIP 2, ViT-B/16 @ 384) | Image-text pretraining. Strong at reading text in photos (postings, signs) and at semantic scene categories. **Prior favorite.** |
-| `vit_base_patch14_dinov2.lvd142m` (DINOv2, ViT-B/14, run at 448) | Self-supervised local features. Strong on texture and fine detail (cracks vs potholes vs curb ramps). |
-| `convnext_base.fb_in22k_ft_in1k_384` (ConvNeXt-B @ 384) | Robust convolutional network (CNN), cheap to fine-tune and serve. A safety net. |
-| *Optional, only on a ≥ 40 GB GPU:* `vit_so400m_patch14_siglip_384.v2_webli` | Bigger SigLIP 2. Use it only if the B/16 probe leaves a clear gap. |
+| Family | Model (timm name) | Why it's here |
+|---|---|---|
+| Image–text contrastive | **SigLIP 2 ViT-B/16 @ 384** (`vit_base_patch16_siglip_384.v2_webli`) | Strongest open image–text encoder at this size. Reads text in photos (postings, signs) and knows scene semantics. |
+| Self-supervised | **DINOv2 ViT-B/14 @ 378** (`vit_base_patch14_dinov2.lvd142m`) | The standard frozen-feature backbone. Strong on texture and fine detail (cracks vs potholes vs curb ramps). |
+| Supervised CNN | **ConvNeXt-B IN-22k @ 384** (`convnext_base.fb_in22k_ft_in1k_384`) | A different architecture, so its mistakes differ (good for ensembling). Cheap to train and serve. |
 
-**Pick the winner by val macro-F1.** Probe results go into `reports/probe_bakeoff.json`. That's the decision gate at G2.
+Considered and rejected:
+- **DINOv3:** custom non-OSI license with attribution and use restrictions; no verified advantage on image-level classification at this size.
+- **ConvNeXt V2:** CC-BY-NC, non-commercial.
+- **EVA-02-B @ 448:** MIT and strong, but about 2.4× the compute of ConvNeXt-B.
+- **Meta PE-Core-B:** 224 px only, and small details matter here.
 
-### 3.4 Fine-tuning recipe (LP-FT)
-Linear probe → full fine-tune: initialize the classifier head from the trained linear probe, then unfreeze everything. LP-FT keeps more of the pretrained features than plain fine-tuning, which helps on **out-of-distribution photos (the live demo)**.
+**We fine-tune all three. Selecting by a frozen probe isn't safe:** probe rank doesn't reliably predict fine-tuned rank (the MAE paper's tables; Kornblith 2019). The frozen probes still run first: they are the baseline, they initialize the heads (LP-FT), and they choose the crop mode quickly.
 
-- **Optimizer:** AdamW, weight decay 0.05. **Layer-wise learning-rate decay 0.75**. Backbone top-layer learning rate 5e-5, head 1e-3. Cosine schedule with 1 epoch of warmup. 10 epochs (early-stop on val macro-F1). Batch 64 (gradient accumulation if memory is tight). bf16, gradient clip 1.0.
-- **Loss:** cross-entropy with **label smoothing 0.1**, which absorbs some of the crowd-label noise.
-- **Train augmentation:** RandomResizedCrop to a square (scale 0.5–1.0, ratio 3/4–4/3), horizontal flip, mild ColorJitter (0.2), rotation ±10°.
-  - **No vertical flips.**
-  - **No CutMix/Mixup.** Pasting a pothole into a graffiti photo manufactures label noise.
-  - **No aggressive crops.** A small graffiti tag disappears.
-- **Eval transform:** resize the short side, then **center-crop a square**. **Never letterbox or pad.** Padding would keep the aspect-ratio shortcut visible to the model.
-- **Seeds:** at least 2, 3 if time allows. Report mean ± std so one lucky seed can't fool us.
-- **Stretch (val-gated, optional):** clean the training set using out-of-fold linear-probe predictions (cleanlab-style). Drop at most the 5% most-likely-mislabeled **train** images, retrain, keep only if val improves. **Never clean val or test.** That inflates the metrics.
+### 3.4 Training recipe (LP-FT), and what's decided on val
+1. **Crop-mode check (minutes, on frozen probes):** square center-crop vs a fixed **3:4** crop (which keeps the whole frame of the ~70% portrait photos). Both crop to one shape, so the aspect-ratio shortcut can't leak. Pick by val macro-F1 per backbone. Never pad or squash.
+2. **LP-FT:** the head is initialized from the frozen linear probe, then all layers are unfrozen. LP-FT matched or beat plain fine-tuning in distribution and helped most on shifted data (Kumar et al. 2022), which matches our live-demo photos.
+3. **Default recipe (run 1 for each backbone):**
+   - AdamW, wd 0.05, **layer-wise LR decay 0.75**
+   - learning rate 5e-5 for the top block, 1e-3 for the head
+   - cosine schedule, 1 warmup epoch, 10 epochs, keep the best epoch by val macro-F1
+   - bf16, gradient clip 1.0, batch 64
+   - **label smoothing 0.1**
+   - Augmentation: RandomResizedCrop (scale 0.5–1) at the chosen aspect, horizontal flip, mild ColorJitter, rotation ±10°. **No CutMix/Mixup** (it pastes a pothole into a graffiti photo). **No vertical flips.**
+4. **Alternative recipe (run 2, on the top-2 backbones):**
+   - learning rate 1e-4, LLRD 0.65 (the "CLIP is a strong fine-tuner" setting)
+   - **label smoothing 0**: label smoothing can hurt confidence ranking for abstention (Xia et al. 2025)
+   - The better run per backbone is chosen on val.
+5. **Ensemble:** average the softmax probabilities of the best run of each top-2/top-3 backbone, if val macro-F1 improves. Ensembles also improve calibration.
+6. **Test-time augmentation:** horizontal flip, averaged. Kept only if val improves.
+7. **Stretch (val-gated):** confident-learning cleanup. Out-of-fold frozen-probe predictions flag likely-mislabeled **train** images; drop at most 5% and retrain. **Never clean val or test.**
 
-### 3.5 Calibration and abstention
-- **Temperature scaling** fitted on val (one scalar).
-- **Abstain threshold τ** = the smallest max-probability such that val accuracy on accepted images is ≥ 90%. Both values ship in `model_meta.json`.
-- **Abstain path in the product:** show the top 3, ask Claude for a second opinion, and the user confirms. This is also our **false-positive control** for photos that aren't street problems at all.
+### 3.5 Calibration and abstention (B)
+- **Temperature scaling** on val, fitted to the **final** model or ensemble.
+- **Abstain threshold:** the smallest max-probability where the **lower 95% bound** (Clopper–Pearson) of val selective accuracy is ≥ 0.90. A threshold tuned to exactly 90% on val misses on test about half the time; the margin fixes that.
+- Report the risk–coverage curve and AURC on val. Coverage on test is reported with a CI.
+- **In the product:** when the model abstains, show the top 3, ask Claude for a second opinion, and the user picks. This is also how non-street photos are handled.
 
 ### 3.6 Evaluation protocol (the anti-self-deception rules)
-- **The test set is touched exactly once,** by `ml/final_eval.py`, after `ml/` is code-frozen at G3. CI blocks any other code from referencing `test.csv`, except `serve/baseline/claude_zeroshot.py`. Every test run is logged in `reports/TEST_LEDGER.md` with its reason. If we change the model after seeing test numbers, the new number is labelled **post-hoc** everywhere.
+- **The trainer never touches test.** A trains; B evaluates. Only B's `eval/final_eval.py` and `eval/claude_zeroshot.py` may read test (CI-enforced).
+- **Test is run once**, after the `ml/` code freeze at G3, logged in `reports/TEST_LEDGER.md` beforehand. Any re-run is labelled **post-hoc**.
 - **Metrics:**
-  - top-1, top-3, macro-F1, per-class F1, confusion matrix
-  - selective accuracy and coverage at τ
-  - **95% confidence intervals from a cluster bootstrap that resamples map cells** (photos from one block aren't independent)
-  - prior-weighted top-1 using real SF photo-report volumes
+  - top-1, top-3, macro-F1, per-class F1, confusion matrix, ECE
+  - selective accuracy and coverage at τ, and AURC
+  - **95% CIs from a cluster bootstrap over map-block groups**
+  - prior-weighted top-1
 - **Baselines on the same frozen subset:**
   - chance (5.9%)
-  - the best frozen linear probe
-  - Claude zero-shot: a stratified 60-per-class subset of test, 1,020 images, selected by a fixed seed and committed as `reports/claude_baseline_ids.csv`
-  - the cascade (model, with Claude on abstentions)
-
-  Claude's prompt is tuned **on val only**, then frozen before it ever sees test.
-- **Every number on a slide, in the README or on Devpost** must come from a committed JSON file in `reports/`.
+  - the best frozen probe
+  - Claude zero-shot: same category definitions plus a few **train** examples; prompt tuned on val, frozen before test
+  - the cascade (model, with Claude when it abstains)
+- **Optional label audit (B):** hand-check about 170 val photos (10 per class) to estimate how often the crowd label is wrong. That's the realistic accuracy ceiling, and a good line for the pitch.
+- **Every number on a slide, in the README or on Devpost** comes from a committed JSON in `reports/`.
 
 ---
 
@@ -116,107 +136,123 @@ Linear probe → full fine-tune: initialize the classifier head from the trained
 
 | Leakage path | Control | Enforced by |
 |---|---|---|
-| Same photo in two splits | sha1 dedupe at scrape time | `verify_data.py` (sha1 check) |
-| Same object or spot (repeat reporters, a tagged wall photographed again) | **Spatial grouping:** split by geohash-7 cell (~150 m block). Cells sharing an address are merged, which fixed 87 GPS-jitter cases. | `verify_data.py` (geohash, group and address checks) |
-| Same object straddling two neighbouring blocks | **50 m same-class buffer:** dropped 892 train/val photos near a held-out photo | `verify_data.py` (0 pairs within 50 m) |
-| Near-identical re-uploads | **dHash ≤ 6 bits** across splits; 137 dropped | `verify_data.py` (0 near-dup pairs) |
-| Over-represented single reporters | At most 3 photos per address per class at scrape time | `scrape_sf311.py` |
-| Metadata shortcut (agency, location, time) | Classifier input is pixels only | Code review. The `ml/` dataloader returns `(image, label)` only. |
-| Aspect-ratio shortcut | Square crop, no padding | Code review of `ml/` transforms |
-| Tuning on test (hyperparameters, threshold, prompt) | Val for every decision; test once | `scripts/guard_repo.py` in CI; TEST_LEDGER |
-| Split files edited by hand | sha256 values frozen in `SPLIT_MANIFEST.json` | `verify_data.py` in CI |
-| Pretraining overlap (backbone saw these images) | Can't be ruled out. The photos sit behind an SF-only Cloudinary account, so overlap is unlikely. **Disclosed** in the model card. | n/a |
+| Same photo in two splits | sha1 dedupe at scrape time | `verify_data.py` |
+| Same object or spot (repeat reporters) | **Spatial grouping** by geohash-7 cell (~150 m). Cells that share an address are merged (fixed 87 GPS-jitter cases). | `verify_data.py` |
+| Same object straddling neighbouring blocks | **50 m same-class buffer** (dropped 892 train/val photos) | `verify_data.py` (0 pairs) |
+| Near-identical re-uploads | **dHash ≤ 6 bits** across splits (137 dropped) | `verify_data.py` (0 pairs) |
+| One reporter dominating a class | At most 3 photos per address per class at scrape time | `scrape_sf311.py` |
+| Metadata shortcut | Model input is pixels only | Code review of `ml/data.py` |
+| Aspect-ratio shortcut | Fixed-shape crop, no pad, no squash | Code review of `ml/data.py` |
+| Tuning on test (hyperparameters, crop, ensemble, threshold, prompt) | Val for every decision; test once; trainer ≠ evaluator | `guard_repo.py` in CI + TEST_LEDGER |
+| Split files edited | sha256 frozen in `SPLIT_MANIFEST.json` | `verify_data.py` in CI |
+| Backbone pretraining overlap | Can't be ruled out. The photos sit behind SF's own Cloudinary account, so overlap is unlikely. **Disclosed** in the model card. | n/a |
+
+Precedent for why this matters: random hold-outs on spatially autocorrelated imagery overstated CNN accuracy by up to 28% (Kattenborn et al. 2022). See WHY §2.5.
 
 ---
 
 ## 5. System architecture
 
 ```
- Phone browser (app/, React + Vite PWA)
-   │ 1. photo (resized to JPEG ≤1280px) + GPS + language
-   ▼
- Inference API (serve/, FastAPI on the GPU box, public via cloudflared tunnel)
-   ├── POST /classify ── fine-tuned model (ml/ artifact) ── top-3 + calibrated probs + abstain
-   ├── POST /report ──── Claude (claude-opus-5-5, vision + structured output)
-   │                     ── report JSON in user's language + English copy
+ iPhone app (ios/, SwiftUI)                                   Convex (convex/)
+   │ photo → JPEG ≤1280px, GPS, language                      ▲ reports table (no photos)
+   ▼                                                           │ live subscription → MapKit pins
+ Inference API (serve/, FastAPI on the GPU box, HTTPS via cloudflared)
+   ├── POST /classify ── ml/infer.py Predictor (A) + calibration (B) → top-3, abstain
+   ├── POST /report ──── serve/claude_report.py (B) → claude-opus-5-5 vision + structured output
    └── GET  /health
-   │
-   ▼
- Convex (app/convex/): reports table, live query → live map (Leaflet)
 ```
-
-**Contracts are frozen at G1** (`contracts/`). Everyone builds against them from minute one using the stub classifier (`serve/`), so nobody waits on anybody.
+**Nobody waits on anybody:**
+- C builds against `contracts/examples` through an in-app `MockAPI`.
+- A's API serves a stub classifier until the model exists.
+- B builds the metrics on synthetic logits, then real `val_logits.npz` files as A's runs finish.
 
 ---
 
-## 6. Team split: three people, three lanes, one integration
+## 6. Team split: two people on the model, one on the app
 
-| | Owner | Directory | Builds | Ships to the others |
+The model is most of the work, so two people work on it, split the way serious ML teams split it: **one person trains, a different person judges.** That separation is itself a guard against inflated results.
+
+| | Owner | Lane | Builds | Hands off |
 |---|---|---|---|---|
-| **A: Model** | Nirvaan (has the GPU and the images) | `ml/`, `reports/` | bake-off, LP-FT, calibration, final eval, model card | `model_meta.json` + weights (shared out of band), `reports/*.json` |
-| **B: Inference + Claude** | *(fill in)* | `serve/` | FastAPI, model loading, Claude report endpoint, Claude zero-shot baseline, public tunnel | live API URL, `reports/claude_baseline.json` |
-| **C: Product + Pitch** | *(fill in)* | `app/` | phone app, Convex live map, languages, demo script, Devpost, video | the demo |
+| **A: Training + API host** | Nirvaan (GPU + images) | `ml/`, `serve/app.py`, `serve/classifier.py`, `serve/tests/` | data pipeline, frozen probes, LP-FT on 3 backbones, recipe variants, ensemble, `ml/infer.py`, the API on the GPU box | `val_logits.npz` per run → B; the artifact → B; the API URL → C |
+| **B: Evaluation + Claude** | *(fill in)* | `eval/`, `reports/`, `serve/claude_report.py`, `serve/prompts/` | metrics with bootstrap CIs, the val decision tables, calibration and abstain threshold, Claude report writer, Claude zero-shot baseline, **the one test run**, model card | decision tables → A; calibrated artifact → A; numbers → C |
+| **C: iOS app + submission** | *(fill in)* | `ios/`, `convex/` | SwiftUI app, MapKit + Convex live map, languages, emergency and abstain UX, demo video, Devpost | the demo and the submission |
 
-Full self-contained briefs, ready to paste into each person's Claude session:
-- [docs/roles/A-model.md](docs/roles/A-model.md)
-- [docs/roles/B-serve-claude.md](docs/roles/B-serve-claude.md)
-- [docs/roles/C-app-pitch.md](docs/roles/C-app-pitch.md)
+**Why not split the GPU work across three people?** With one GPU, training runs back to back no matter who launches them, and splitting the launches only adds coordination. What *can* run in parallel is everything around the GPU: evaluation, calibration, Claude, and the app. That's how the work is cut.
+- If B or C can get a **second GPU** (e.g. the Vultr credits from the MLH prize), the obvious use is running backbone 3 and the recipe variants in parallel on it. Same code, same configs.
 
-**Shared files** (`contracts/`, `data/`, `scripts/`, `PLAN.md`, `CLAUDE.md`, `CONTRIBUTING.md`, `.github/`) are owned by all three. Changes need a PR labelled `shared` and a 👍 from both other people.
+**Briefs** (paste into each person's Claude session):
+- [A: training](docs/roles/A-training.md)
+- [B: evaluation + Claude](docs/roles/B-eval-claude.md)
+- [C: iOS app](docs/roles/C-ios-app.md)
+
+**Shared files:** `contracts/`, `data/`, `scripts/`, `PLAN.md`, `CLAUDE.md`, `CONTRIBUTING.md`, `docs/`, `.github/`. These change only in a `shared`-labelled PR with both other approvals.
 
 ---
 
 ## 7. Timeline and gates (PT, Sat → Sun)
 
-| Gate | Time | Exit criteria (all must be true) |
+| Gate | Time | Exit criteria |
 |---|---|---|
-| **G0 Setup** | 18:45 | Everyone has cloned the repo, read this plan, and confirmed their role. Python/Node environments installed. Each person's own `ANTHROPIC_API_KEY` in a local `.env`. Images on the GPU box. **Team decides the open questions in §10.** |
-| **G1 Contracts frozen** | 19:30 | B's stub API is running and reachable by URL. C's app calls the stub from a phone. Contract changes after this need all three. |
-| **G2 Backbone locked** | 22:30 | A's PR with `reports/probe_bakeoff.json` and a first LP-FT val score. B's `/report` is real (Claude) and returns schema-valid JSON. C's capture → result screen works on a phone. |
-| **G3 Integration** | 01:30 | The real model is behind `/classify` on the public URL. The app works end to end on a phone. The Convex map is live. **`ml/` code freeze**, then A runs `final_eval.py` **once**. |
-| **G4 Feature freeze** | 04:30 | `reports/final_eval.json` and `reports/claude_baseline.json` committed. README numbers filled from them. Bug fixes only from here. |
-| **G5 Story done** | 06:30 | Demo video recorded (works when sponsors judge without us). Devpost text, screenshots and GitHub link complete. |
-| **Submit** | **07:45** | Submitted on Devpost with everyone listed as a teammate. Buffer before the 9:00 hard deadline. |
+| **G0 Setup** | 19:15 | Everyone has read PLAN + their brief. Roles decided (§10). Environments installed. Own API keys in `.env`. Images on the GPU box. PR #1 merged. |
+| **G1 Contracts frozen** | 20:00 | A's stub API answers over HTTPS. C's app runs on `MockAPI`. B's metrics tests run on synthetic logits. Frozen probes done (`probe_bakeoff.json`). |
+| **G2 Backbones compared** | 23:00 | All three LP-FT runs are done or nearly done. B's val table posted. Claude `/report` is real. C's app calls the real API from a physical iPhone. |
+| **G3 Integration** | 02:00 | Variants done, ensemble chosen on val, calibrated by B. The real model is behind `/classify`. Full flow on the iPhone, including the live map. **`ml/` code freeze**, then B's final eval (once). |
+| **G4 Feature freeze** | 05:00 | `final_eval.json`, `claude_baseline.json` and `MODEL_CARD.md` committed. Bug fixes only. |
+| **G5 Story done** | 07:00 | Demo video recorded. Devpost complete. |
+| **Submit** | **07:45** | Submitted, all teammates listed. Buffer before 9:00. |
 
-Sleep in shifts after G3. A's GPU jobs run unattended. Never leave the merge queue without an owner.
+GPU queue (A):
+1. probes and the crop check: 19:15–20:00
+2. LP-FT × 3: 20:00–~22:45
+3. variants on the top 2: ~22:45–01:00
+4. ensemble and export: by 01:30
+
+Sleep in shifts after G3. Never leave the merge queue without an owner.
 
 ---
 
 ## 8. Prize targeting (only claim what we really use)
 
-| Prize | Why we qualify | Owner of the evidence |
+| Prize | Why we qualify | Evidence owner |
 |---|---|---|
-| **[Anthropic] Claude for Public Benefit** (primary) | Claude drives the report: vision, structured output, multilingual access, a second opinion when the model is unsure, plus a measured zero-shot baseline | B (code), C (story) |
+| **[Anthropic] Claude for Public Benefit** (primary) | Claude drives the report: vision, structured output, multilingual access, the second opinion when the model is unsure, plus a measured zero-shot baseline | B (code), C (story) |
 | **Cal Hacks Best People-First Social Impact** | Language access to city services. Fewer misrouted reports. | C |
-| **Cal Hacks Most Technically Complex** | A trained and calibrated model with selective prediction and leakage-proof evaluation | A |
+| **Cal Hacks Most Technically Complex** | Three fine-tuned backbones, an ensemble, calibrated selective prediction, a spatial-leakage-proof evaluation | A + B |
 | **Cal Hacks overall (1st–3rd)** | Mapped to the judging criteria below | all |
-| **[Convex] Best use of Convex** | **Only if** reports and the live map really run on Convex live queries | C |
-| **[MLH] Best Use of Vultr** | **Only if** the GPU or API actually runs on Vultr | A/B |
+| **[Convex] Best use of Convex** | **Only if** the live map really runs on Convex live subscriptions (`ConvexMobile`) | C |
+| **[MLH] Best Use of Vultr** | **Only if** a GPU or the API actually runs on Vultr | A |
 | **[Microsoft] Built for the Real World** | Real city data, real routing, honest evaluation | C |
 
-**C confirms the Anthropic prize's eligibility rules** (Hive/Slack #ask-directors) by G0+30 min.
+C confirms the Anthropic prize's eligibility rules (Hive / Slack #ask-directors) at G0.
 
 **How the plan maps to the Cal Hacks judging criteria:**
-- **Application:** real SF data, real agencies, and a person-in-the-loop (nothing auto-files).
-- **Intentionality:** language access, abstention instead of confident wrong answers, and confirmation before filing.
-- **Functionality:** an end-to-end phone demo plus a recorded video.
-- **Creativity:** a crowd-sourced city dataset turned into a routing model, with Claude as a multilingual civic assistant.
-- **Technical complexity:** a backbone bake-off, LP-FT, calibration, selective prediction, a spatial-leakage-proof split, and a cluster bootstrap.
+- **Application:** real SF data and agencies, person-in-the-loop.
+- **Intentionality:** language access, "not sure" instead of confident wrong answers, confirmation before filing.
+- **Functionality:** a native iPhone demo plus a recorded video.
+- **Creativity:** a city's own crowd reports turned into a routing model, with Claude as a multilingual civic assistant.
+- **Technical complexity:**
+  - 3 backbones, LP-FT, an ensemble
+  - calibrated abstention with a statistical safety margin
+  - a spatially grouped, leakage-audited split
+  - cluster-bootstrap CIs and a trainer/evaluator separation
 
 ---
 
 ## 9. Product guardrails (the ethics we'll get asked about)
 
-- **We never file to the real SF 311** in the demo. We produce a ready-to-file report with a link to sf311.org. Fake reports waste city crews' time.
-- **Danger:** if Claude flags an emergency (live wire, gas, fire, someone hurt), the app tells the user to call 911 instead of filing.
-- **Encampment photos show people.** No encampment photos in slides, the video, screenshots or the repo. The product frames this class as "request outreach services", not enforcement. (See the §10 decision.)
-- No user photos are stored beyond the demo session. The Convex map stores the category, coordinates and text only, **no image**.
+- **We never file to the real SF 311** in the demo. We produce a ready-to-file report and link to sf311.org.
+- **Danger** (downed wire, gas, fire, injury): the app shows "Call 911", not a filing flow.
+- **Encampment photos show people.** None in slides, video, screenshots or the repo. The product frames this class as "request outreach services", not enforcement.
+- No user photos are stored. Convex stores the category, coordinates and text only.
+- If DINOv3 is ever used, add a "Built with DINOv3" credit (license term). The current plan uses DINOv2 (Apache-2.0).
 
 ---
 
-## 10. Open decisions (team settles at G0, then the answers get recorded here)
+## 10. Open decisions (settle at G0 in the "G0: team decisions" issue)
 
-1. **Keep the `encampment` class?** Recommendation: keep it in the model (it's real 311 volume, and dropping it would misroute those photos) but follow the product guardrail in §9. The alternative is to drop the class and retrain, which costs about 0 extra time if decided before G2.
-2. **GPU:** what card and how much memory? This sets batch size and whether the So400m backbone is in the bake-off.
-3. **Names for B and C,** plus GitHub handles for CODEOWNERS.
+1. **Who is B and who is C?** Plus GitHub handles for `.github/CODEOWNERS`.
+2. **GPU model and memory.** This sets batch size and whether all three backbones plus variants fit before G3.
+3. **Keep the `encampment` class?** Recommendation: keep it in the model (it's real 311 volume, and dropping it would misroute those photos) and apply the §9 guardrails. Dropping it costs nothing if decided before G2.
 4. **Product name.**

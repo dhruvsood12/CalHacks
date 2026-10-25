@@ -1,3 +1,3 @@
 # ml/ (owner: A)
-Brief: [docs/roles/A-model.md](../docs/roles/A-model.md). Architecture and protocol: [PLAN.md §3–4](../PLAN.md).
-Planned modules: `data.py`, `extract_features.py`, `probe.py`, `train.py`, `calibrate.py`, `final_eval.py` (the only test reader), `export.py`.
+Brief: [docs/roles/A-training.md](../docs/roles/A-training.md). Architecture: [PLAN.md §3](../PLAN.md). Interface B depends on: [contracts/predictor.md](../contracts/predictor.md).
+Planned: `data.py`, `extract_features.py`, `probe.py`, `train.py`, `infer.py`, `export.py`. Never reads test data.

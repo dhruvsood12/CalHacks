@@ -26,10 +26,10 @@ gh pr create --fill                          # then fill in the template
 |---|---|
 | **No direct pushes to `main`.** Everything goes through a PR. | One bad push breaks all three sessions at once. |
 | **1 approval from someone other than the author.** 2 for `shared`-labelled PRs. | A second set of eyes, and contract changes affect everyone. |
-| **CI must be green** (`guards` job: data audit, guardrails, contract tests, syntax; plus `app` build if present). | Machines catch secrets, leakage and broken schemas faster than tired humans. |
+| **CI must be green** (`guards` job: data audit, guardrails, contract tests, syntax, `eval/` and `serve/` tests; plus the `convex` type-check). The iOS app isn't built in CI, so app PRs attach a device screen recording instead. | Machines catch secrets, leakage and broken schemas faster than tired humans. |
 | **Squash merge only.** Delete the branch after merging. | `main` history stays one-PR-per-commit, so reverts are clean. |
 | **Merge windows:** merges happen in the 15 minutes before each gate, unless a fix unblocks someone. | A quiet `main` between gates means fewer surprise conflicts. |
-| **After feature freeze (G4, 04:30):** bug fixes only, each with a one-line risk note. | Late features are how demos break. |
+| **After feature freeze (G4, 05:00):** bug fixes only, each with a one-line risk note. | Late features are how demos break. |
 | **If `main` breaks:** revert the offending PR first, then debug. | Restore a working demo before anything else. |
 | **Never:** force-push, rewrite `main` history, enable auto-merge, or merge with failing CI "just this once". | |
 
