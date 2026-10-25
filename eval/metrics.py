@@ -228,6 +228,8 @@ def cluster_bootstrap_ci(metric_fn: Callable[[np.ndarray], float], groups: Seque
         pick = rng.integers(0, len(uniq), size=len(uniq))
         idx = np.concatenate([members[g] for g in pick])
         vals[b] = metric_fn(idx)
+    if not np.isfinite(vals).any():  # e.g. selective accuracy at zero coverage
+        return float("nan"), float("nan")
     return (float(np.nanpercentile(vals, 100 * alpha / 2)),
             float(np.nanpercentile(vals, 100 * (1 - alpha / 2))))
 
