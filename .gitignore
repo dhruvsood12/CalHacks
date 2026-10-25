@@ -31,3 +31,4 @@ xcuserdata/
 DerivedData/
 *.xcuserstate
 ios/**/Config.local.xcconfig
+serve/cache/

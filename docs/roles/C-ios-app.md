@@ -23,12 +23,21 @@ You build the only thing judges touch: a native iPhone app. After feature freeze
 - **Running on a real iPhone:** Xcode + a free Apple ID (Personal Team) can install on your own device; trust the developer profile on the phone. TestFlight needs a paid account and review, so skip it. Also have the simulator flow working as a backup.
 
 ## Screens
-1. **Capture:**
+1. **Capture, with automatic geotagging:**
    - Camera / photo library.
-   - GPS (manual address fallback).
+   - **Location with zero taps:**
+     - Camera photos use `CLLocationManager`, requested once at capture, with accuracy shown.
+     - **Library photos use the photo's own location** (`PHAsset.location`; needs photo-library read access, since `PhotosPicker` alone strips it).
+   - Reverse-geocode with `CLGeocoder`: "📍 3601 Lyon St (±8 m)". Tap to adjust on a map.
+   - **Manual pin only as a fallback.** That's a direct contrast with SF311, which makes the resident place a pin.
    - Language picker. Default to the device language; offer at least English, Español, 中文, Filipino, Tiếng Việt, Русский.
 2. **Result:**
-   - Top category: display name, agency and confidence bar. The other two of the top 3 are tappable.
+   - Send `lat`/`lng` with `/classify` (it uses them as a second signal).
+   - Top category: display name, "usually handled by" agency, and confidence bar. The other two of the top 3 are tappable.
+   - **Already reported? card** (from `GET /context`): "Someone reported this 2 days ago, 38 m away — still open." Two buttons:
+     - **Add mine as confirmation:** copies the case number + "also seen on <date>" into the report.
+     - **File anyway**
+   - **Fix-time line:** "Similar issues are typically fixed in about 6 days" (median; p75 as "most within 14 days").
    - **If `abstain` is true:** "Not sure — here are my best guesses", and the user must pick one.
    - Then `/report`: a loading state, then Claude's title, description and next steps in the user's language, with an expandable English copy.
    - **If `emergency` is true:** a full-width "Call 911" banner with a `tel:911` link, and no filing flow.
@@ -43,7 +52,7 @@ You build the only thing judges touch: a native iPhone app. After feature freeze
   - Xcode project in `ios/` (with a `.gitignore` for `xcuserdata/`, `DerivedData/`, `*.xcuserstate`), and a `convex/` init.
   - Confirm the **Anthropic "Claude for Public Benefit" prize rules** and the **Devpost video length limit** in Hive or Slack #ask-directors, and post both in team chat.
 - **C1 (by G1, 20:00):** the capture screen plus `MockAPI` result screen on the simulator.
-- **C2 (by G2, 23:00):** the real `/classify` and `/report` against A's tunnel, on a physical iPhone. Language picker. Abstain UX. Emergency banner.
+- **C2 (by G2, 23:00):** the real `/classify`, `/context` and `/report` against A's tunnel, on a physical iPhone. **Automatic geotagging** (GPS + photo EXIF + address). Already-reported card. Fix-time line. Language picker. Abstain UX. Emergency banner.
 - **C3 (by G3, 02:00):** Convex live map with save and subscribe, and the About screen.
 - **Optional, if you have an iOS 26 iPhone:** run about 20 **val** photos through the official SF311 app's photo suggestion and record its pick → `reports/sf311_app_check.csv`. **Never press submit.** That's the only way we can say anything about SF311's accuracy.
 - **C4 (G4, 05:00, feature freeze):**
@@ -57,9 +66,13 @@ You build the only thing judges touch: a native iPhone app. After feature freeze
 
 ## Pitch (3 min + 2 min Q&A; you drive, A and B take the technical questions)
 1. **(20 s) Problem:** dozens of 311 categories and agencies.
-   - SF311's app already suggests a category from a photo, but **nobody publishes how accurate that is**, the app covers only 5 languages, and general-AI filers have been criticised by the city for getting reports wrong.
+   - SF311's app already suggests a category from a photo, but **nobody publishes how accurate that is**.
+   - It makes you place a pin.
+   - It doesn't warn you that **44% of new reports duplicate an open one nearby** (`docs/evidence/city_context_stats.json`).
+   - It doesn't tell you how long a fix takes.
+   - It covers 5 languages.
    - Read [docs/WHY.md](../WHY.md) §1 before writing a single pitch line. **Never claim we beat SF311's accuracy** unless we measured it.
-2. **(60 s) Live demo on the iPhone:** photo → category + agency → report in Spanish → the pin appears on the map.
+2. **(60 s) Live demo on the iPhone:** photo → location pins itself → category + agency → **"already reported 2 days ago, 38 m away"** → fix time → report in Spanish → the pin appears on the map.
 3. **(40 s) How:** 30k real SF 311 photos, three fine-tuned vision models, a leakage-proof split, calibrated "not sure", and Claude for language and a second opinion.
 4. **(30 s) Results:** B's slide; every number has a JSON path.
 5. **(30 s) Impact and next steps:**

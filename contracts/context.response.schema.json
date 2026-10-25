@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "GET /context?label=<label>&lat=<lat>&lng=<lng> response: city context at the photo's location",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "label",
+    "address",
+    "nearby_open",
+    "fix_time",
+    "data_as_of"
+  ],
+  "properties": {
+    "label": {
+      "type": "string",
+      "description": "One of contracts/categories.json labels"
+    },
+    "address": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Nearest address from the city's own records near this point, if any"
+    },
+    "nearby_open": {
+      "type": "array",
+      "description": "Same-category reports still open within 75 m, filed in the last 30 days, newest first (max 5)",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "service_request_id",
+          "distance_m",
+          "requested_at",
+          "days_open",
+          "status"
+        ],
+        "properties": {
+          "service_request_id": {
+            "type": "string"
+          },
+          "distance_m": {
+            "type": "number"
+          },
+          "requested_at": {
+            "type": "string"
+          },
+          "days_open": {
+            "type": "number"
+          },
+          "status": {
+            "type": "string"
+          },
+          "address": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      }
+    },
+    "fix_time": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "required": [
+        "median_days",
+        "p75_days",
+        "n",
+        "scope"
+      ],
+      "properties": {
+        "median_days": {
+          "type": "number"
+        },
+        "p75_days": {
+          "type": "number"
+        },
+        "n": {
+          "type": "integer"
+        },
+        "scope": {
+          "type": "string",
+          "description": "e.g. 'citywide, last 12 months' or 'District 6, last 12 months'"
+        }
+      }
+    },
+    "data_as_of": {
+      "type": "string",
+      "description": "DataSF data_as_of of the newest record used (city data refreshes nightly)"
+    }
+  }
+}

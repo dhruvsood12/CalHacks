@@ -62,6 +62,7 @@ def check_contracts():
         "classify.response.abstain.json": "classify.response.schema.json",
         "report.response.json": "report.response.schema.json",
         "model_meta.json": "model_meta.schema.json",
+        "context.response.json": "context.response.schema.json",
     }
     cats = json.loads((ROOT / "contracts" / "categories.json").read_text())["classes"]
     labels = {c["label"] for c in cats}

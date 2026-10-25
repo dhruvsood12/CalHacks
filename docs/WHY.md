@@ -16,6 +16,9 @@ Sources are linked.
 - **The SF311 app already suggests a request type from a photo.** The city's page advertises "Smart photo recognition": the app suggests the request type and identifies objects and licence plates. **[verified]** https://www.sf.gov/sf311-mobile-app
 - **Five filing languages:** English, Traditional Chinese, Spanish, Filipino and Vietnamese. The phone line has interpreters for 160+ languages. **[verified]** (same page) · [research] https://www.sf.gov/departments/311-customer-service-center
 - **No published accuracy** for the photo suggestion, and no description of the model. **[verified]**
+- **Location is a pin you place.** The FAQ says the address is an approximation based on the pin, and to "place the pin as accurately as possible". Nothing there mentions filling it in from GPS or the photo. **[verified]** https://www.sf.gov/sf311-mobile-app-frequently-asked-questions
+- **Shows recent requests in your neighbourhood** and lets you follow requests. **Neither page mentions** a duplicate warning before you file, or expected fix times. **[verified]** (FAQ + [App Store listing](https://apps.apple.com/us/app/sf311/id666635420))
+- **Version 7 requires iOS 26.** Older phones stay on v6. **[verified]** (same two pages)
 - **It owns everything downstream:** routing into city work queues, duplicates, status tracking, about 870k cases a year. [research, from DataSF]
 - **Others ship the same idea:**
   - LA's MyLA311 uses image recognition to pick the request type (2025)
@@ -25,6 +28,16 @@ Sources are linked.
 
   [research] [LA](https://mayor.lacity.gov/news/mayor-bass-announces-launch-new-myla311-system-make-la-cleaner-and-safer-improved-city) · [NYC](https://www.cityandstateny.com/policy/2026/07/how-nyc-government-using-ai/414871/) · [CivicPlus](https://www.civicplus.com/?p=26648) · [Viladecans](https://www.aoc.cat/en/blog/2024/viladecans-gestio-incidencies-ia-digicanvis/)
 - **A resident-built competitor, Solve SF,** files photo-first using a general-purpose model (Gemini). City officials told the SF Standard it can get reports wrong, and the developer disputes this. [research] https://sfstandard.com/2025/05/26/san-francisco-311-app-wars-solve/ · https://sf.gazetteer.co/can-an-ai-powered-app-solve-sf-and-its-311-woes
+
+### What the city's own data says residents need (measured by us)
+| Finding | Number | Source |
+|---|---|---|
+| New reports with an earlier **same-type report still open within 50 m** (filed in the previous 14 days), Jun 15–29 2025, all 17 classes | **44.4%** of 28,431. Graffiti 73.9%, garbage 50.7%, illegal postings 49.5% | `docs/evidence/city_context_stats.json` (`scripts/city_context_stats.py`) |
+| Typical time to close | garbage 0.4 days · graffiti 6.8 · sidewalk 13.3 · curb ramp 12.4 · trees **51.3** (median) | same file |
+| Category from **location alone** on held-out blocks | **16.3%** top-1 / 35.5% top-3, against 5.9% / 17.6% chance | `docs/evidence/location_signal.json` (`scripts/location_signal.py`) |
+| Agency from location (nearest past same-type report) vs the category's usual agency | **63.5% vs 71.5%**: location does *not* help routing, so we don't claim it | same file |
+
+The 50 m match is a *possible* duplicate: two tags on one block can be different walls. We show the existing report and let the resident decide.
 
 **So "it uses a photo" is not our differentiator.** Cities have shown there's demand. The open question nobody has answered publicly is *how accurate is it, and how do you know?* That's where we are structurally different.
 
@@ -37,11 +50,17 @@ Sources are linked.
 | **Agency routing explained** | Inside city systems | Varies | Names the responsible agency (from SF's own routing history) and explains what happens next. |
 | **Languages** | 5 in the app | Varies | Claude writes the report in the resident's language (any language Claude handles well), plus an English copy for the city. |
 | **Is the general-AI approach good enough?** | n/a | Assumed | **We measure it.** Claude zero-shot on the same test subset, with the same category definitions, against our model and against the cascade. |
+| **Already reported?** | Browse a recent-requests list yourself | No | **Automatic check at the photo's GPS:** same-type open reports within 75 m, shown before you file. 44.4% of new reports had one. |
+| **Expected fix time** | Not shown | No | From the city's own close times, per category (and per district where there's enough data) |
+| **Location** | Place a pin | Varies | **Zero taps:** GPS at capture, or the photo's own EXIF location for library photos, plus the nearest address |
+| **Uses location to classify** | Unknown | No | **Geo-prior**: image × location, with the weight tuned on val (location alone is 16.3% vs 5.9% chance) |
+| **Phones supported** | iOS 26+ for v7 | — | iOS 17+ |
 | **Portable to other cities** | No | Yes, but unmeasured | The pipeline needs only a city's public 311 data with photos: scrape → spatial split → fine-tune → evaluate. |
 
 **What we can't claim:**
 - **That we're more accurate than SF311's own suggestion.** Their accuracy isn't public. We could only claim it by measuring both on the same photos.
-  - **Optional:** someone with an iOS 26 iPhone runs about 20 of our **val** photos through the SF311 app's suggestion and records its pick. **Never press submit.** Without that, we say "measured and calibrated", not "more accurate than SF311".
+  - **Team task:** someone with an iOS 26 iPhone runs about 20–40 of our **val** photos through the SF311 app's suggestion and records its pick. **Never press submit.** Without that, we say "measured and calibrated", not "more accurate than SF311".
+- **That fine-tuning makes us automatically better.** SF311's suggestion is presumably also a trained model. Being fine-tuned isn't an edge in itself. Measuring it, calibrating it and building the location and city-data layer around it is.
 - **That we replace SF311.** We don't: no city work queues, duplicates or status tracking. The honest framing is an **auditable, multilingual front door** that hands the resident a correct, ready-to-file report, plus a **recipe any city can reproduce** to check whether its own photo-categorization actually works.
 
 **Why misrouting matters (precedent):**
@@ -67,6 +86,7 @@ Verdict key: ✅ supported by precedent, ⚠️ mixed, ❌ contradicted. In each
 | 2.9 | **Claude/VLM zero-shot as the bar to beat** | General VLMs trail CLIP-style classifiers on classification ([Zhang et al., NeurIPS 2024](https://arxiv.org/abs/2405.18415)). CLIP zero-shot is weak on specialised tasks. No published Claude-on-311 benchmark. | ✅ | We give Claude the same category definitions plus a few **train** examples, so the comparison is fair, not a straw man |
 | 2.10 | **Square crop** | Center-cropping 576×768 to a square throws away 25% of the frame. Train/test scale mismatch matters. [FixRes](https://arxiv.org/abs/1906.06423) | ⚠️ | **Changed:** a quick val check of square vs fixed 3:4 crop on frozen probes. Both crop to one shape (the aspect-ratio shortcut stays closed). Never pad or squash. |
 | 2.11 | **LoRA / PEFT instead of full fine-tuning** | Matches full fine-tuning on few-shot fine-grained sets (VPT). No ViT evidence at our scale that it wins. | — | Not used |
+| 2.13 | **Location prior fused with the image model** | Geographic priors improved fine-grained classification on iNaturalist ([Mac Aodha et al., ICCV 2019](https://arxiv.org/abs/1906.05272)). Our location-only result: 16.3% against 5.9% chance on held-out blocks. | ✅ | Geo-prior as a lift table built only from pre-window cases; β tuned on val; test reported with and without it (PLAN §3.7) |
 | 2.12 | **Closest street-imagery precedents** | Road-damage *detection* benchmarks: [RDD2020](https://arxiv.org/abs/2011.08740), [RDD2022](https://arxiv.org/abs/2209.08538) (47k images, YOLO ensembles, F1 ≈ 0.67). Japan's My City Report uses road-manager dashcams, not resident photos. **No published work classifies residents' 311 photos into a city taxonomy** that we could find. | — | Our evaluation protocol is the contribution as much as the model. Small published street-photo classifiers report about 95% on *random* splits, which aren't comparable. |
 
 ### The three backbones (each the best open option in its family, all one-line `timm` downloads)

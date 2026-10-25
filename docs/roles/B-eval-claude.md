@@ -2,7 +2,7 @@
 
 Paste this into your Claude session along with `PLAN.md` and `CLAUDE.md`. Read PLAN §3.5–§4 first.
 
-**Your lane:** `eval/`, `reports/`, and `serve/claude_report.py` (+ `serve/prompts/`).
+**Your lane:** `eval/`, `reports/`, `serve/claude_report.py`, `serve/citydata.py` and `serve/prompts/`.
 
 **You're the half of the model team that judges it.**
 - A trains. You decide what the numbers are, whether they're real, and how confident the model is allowed to be.
@@ -67,6 +67,26 @@ cp .env.example .env                   # your own ANTHROPIC_API_KEY; never paste
     - sets `emergency=true` for danger such as wires, gas, fire or injury
 - **Never** call any SF 311 endpoint. Use a 30 s timeout. On failure, A's API returns 503 and the app shows the classification without a report.
 
+### B3b. City context: "already reported?" + fix time (by G2, 23:00)
+`serve/citydata.py`. A's `serve/app.py` routes `GET /context?label=&lat=&lng=` to `get_context(label, lat, lng) -> dict`. The response must match `contracts/context.response.schema.json`.
+
+- **Already reported?** One live SoQL query to `https://data.sf.gov/resource/vw6y-z8j6.json` with:
+  - the class's `sf311_filter` from `contracts/categories.json`
+  - `within_circle(point, lat, lng, 75)`
+  - `status_description='Open'`
+  - `requested_datetime` within the last 30 days
+
+  Compute `distance_m` yourself and return the 5 newest. Use a 5 s timeout. On failure, return `nearby_open: []` (never block the flow).
+- **Fix time:** precompute at startup (or cache to `serve/cache/fix_times.json`, gitignored) the median and 75th-percentile days to close per class, over the last 12 months citywide. Add a per-supervisor-district version where n ≥ 30.
+  - `scripts/city_context_stats.py` shows the method; its numbers are in `docs/evidence/city_context_stats.json`.
+- **Evidence for the pitch:** `docs/evidence/city_context_stats.json` already shows that **44.4%** of new reports had a same-type open report within 50 m. Re-run it on a second window (e.g. 2025-11) to show the figure is stable, and commit the output.
+- Pass the context into `/report`, so Claude's "what happens next" can say "already reported 2 days ago — add yours as confirmation" and "typically fixed in ~6 days".
+
+### B2d. Geo-prior β (as soon as A's `geoprior.npz` and any `val_logits.npz` exist)
+- Tune β ∈ {0, 0.25, 0.5, 0.75, 1.0, 1.5} on **val** (macro-F1, with AURC as the tie-breaker), using val lat/lng from `data/val.csv`.
+- Write `geo_prior_beta` into the artifact's `model_meta.json`, then refit the temperature **after** fusion.
+- `final_eval.py` reports test **with and without** the geo-prior (β and 0).
+
 ### B4. Claude zero-shot baseline (prompt frozen on val by ~00:00; test run by G4)
 `eval/claude_zeroshot.py`:
 1. Develop the prompt **on the 340 val images only**: the class list, display names, one-line SF definitions, and **2 example photos per class drawn from train** (never val or test). That makes it a fair comparison, not a straw man.
@@ -79,7 +99,7 @@ cp .env.example .env                   # your own ANTHROPIC_API_KEY; never paste
 `eval/final_eval.py --artifact artifacts/<final>`:
 1. Ledger line first.
 2. Predict all 4,372 test images with `Predictor`. The GPU box is fastest; CPU takes about 15 min.
-3. Compute everything from B1 at the calibrated threshold.
+3. Compute everything from B1 at the calibrated threshold, **with and without the geo-prior**.
 4. Repeat on the 1,020-image subset for:
    - the model vs Claude zero-shot vs **the cascade** (model, with Claude's answer when the model abstains)
    - the best frozen probe (A's probe weights, applied to test features inside this script)

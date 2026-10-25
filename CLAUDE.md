@@ -10,14 +10,16 @@ Three people work in parallel, each with their own Claude session, on one shared
    - Never merge your own PR. Never enable auto-merge. Never force-push a shared branch.
 2. **Stay in your lane.**
    - **A** edits `ml/`, `serve/app.py`, `serve/classifier.py`, `serve/tests/` and `serve/requirements.txt`.
-   - **B** edits `eval/`, `reports/`, `serve/claude_report.py` and `serve/prompts/`.
+   - **B** edits `eval/`, `reports/`, `serve/claude_report.py`, `serve/citydata.py` and `serve/prompts/`.
    - **C** edits `ios/` and `convex/`.
    - Shared files (`contracts/`, `data/`, `scripts/`, `docs/`, `PLAN.md`, `CLAUDE.md`, `CONTRIBUTING.md`, `.github/`) change only in a PR labelled `shared`, approved by **both** other people.
 3. **The test set is sealed.**
    - Only B's `eval/final_eval.py` and `eval/claude_zeroshot.py` may read `data/test.csv` or `reports/claude_baseline_ids.csv`. A trains; B judges. The shared data tooling in `scripts/` is the one exception: it builds, audits and fetches the split, and changes to it need two approvals. CI enforces this.
    - Every model and prompt decision is made on **val**.
    - Every test run gets a line in `reports/TEST_LEDGER.md` *before* it runs.
-4. **The split files are frozen.** Never edit `data/*.csv` or `data/SPLIT_MANIFEST.json` by hand. `scripts/verify_data.py` must pass. The model sees pixels only, never metadata.
+4. **The split files are frozen.** Never edit `data/*.csv` or `data/SPLIT_MANIFEST.json` by hand. `scripts/verify_data.py` must pass.
+   - The network sees pixels only, never metadata.
+   - Location enters only through the geo-prior (PLAN §3.7), built from cases filed **before 2024-10-01**.
 5. **No secrets, data or weights in git.**
    - Keys live in `.env` (gitignored), with names only in `.env.example`. Never paste a key into a doc, PR, commit or chat.
    - Images (`data/images/`) and weights (`*.pt`, `*.onnx`, ...) are shared out of band.

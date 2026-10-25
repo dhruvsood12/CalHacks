@@ -10,13 +10,31 @@ This is the source of truth. If something here is wrong, fix it with a PR. Don't
 
 ## 1. The goal (what exists at 9 AM)
 
-**One sentence:** On an iPhone, a resident photographs a street problem. Our vision model, fine-tuned on about 30k real SF 311 photo reports, names the problem and the city agency that handles it, or says it isn't sure. Claude then writes a ready-to-file report in the resident's own language.
+**One sentence:** On an iPhone, a resident photographs a street problem. In one step, with no menus and no pin-dropping:
+- **where:** exact GPS location and the nearest address
+- **what:** our vision model, fine-tuned on about 30k real SF 311 photo reports (with location as a second signal), names the problem and the agency that usually handles it, or says it isn't sure
+- **already reported?** a live check of the city's open reports within 75 m
+- **how long:** the typical fix time from the city's own history
+- **report:** Claude writes a ready-to-file report in the resident's own language
 
-**Why it matters** (details and sources in [docs/WHY.md](docs/WHY.md)): today the resident has to find the right category in a menu, and the filing flow is English-first. We turn "what is this, and who fixes it?" into a photo.
+**Why this beats SF311's app** (full sources in [docs/WHY.md](docs/WHY.md)):
+- **SF311 already suggests a category from a photo, so that alone isn't our edge.**
+- **Our edge is everything around the photo, each measured on the city's own data** (`docs/evidence/`):
+  - **44.4% of new reports** had an earlier same-type report, still open, within 50 m (graffiti 74%, garbage 51%). SF311 shows a "recent requests" list but no duplicate warning before filing. Our check runs automatically at the photo's GPS.
+  - **Fix times** vary from hours (garbage, median 0.4 days) to weeks (sidewalks 13 days, trees 51 days). SF311 shows none.
+  - **Location is filled in automatically** from GPS or the photo's EXIF. SF311 asks the resident to place a pin.
+  - **Location improves the prediction:** location *alone* predicts the category at 16.3% top-1 on held-out blocks, against 5.9% chance. That's a second signal to fuse with the image (§3.7).
+  - **Accuracy is measured and calibrated, with "not sure".** SF311 publishes no accuracy.
+  - **Any language** through Claude. SF311 offers 5 in the app.
+  - **iOS 17+.** SF311 v7 needs iOS 26.
+  - **Head-to-head accuracy against SF311's own suggestion:** measured on the same val photos (team task). We claim "more accurate" only if that measurement says so.
+- **Measured and ruled out:** location does *not* improve agency routing. The nearest past report's agency scored 63.5% against 71.5% for the category's usual agency, so we don't claim it. `docs/evidence/location_signal.json`
 
 **The demo (3-minute pitch, about 60 s of it live):**
-1. Open the app on an iPhone and take or choose a photo (a pothole, a dumped mattress, a broken streetlight).
-2. In about a second: "Pothole or street pavement damage → Public Works, Street and Sewer Repair, 91%", plus two alternatives.
+1. Open the app on an iPhone and take or choose a photo (a pothole, a dumped mattress, a broken streetlight). The location pins itself: "📍 3601 Lyon St".
+2. In about a second: "Pothole or street pavement damage → usually Public Works, 91%", plus two alternatives.
+   - **"Already reported 2 days ago, 38 m away, still open."** Options: add yours as confirmation, or file anyway.
+   - **"Similar issues are typically fixed in about 6 days."**
 3. Pick Español. Claude writes the report: title, description, what happens next. An English copy goes to the city.
 4. An ambiguous photo: the model says **"not sure"**, shows its best guesses, and Claude gives a second opinion. No confident wrong answers.
 5. The live map (Convex) shows the new pin appear in real time.
@@ -29,7 +47,9 @@ This is the source of truth. If something here is wrong, fix it with a PR. Don't
 - **Top-3 accuracy** high enough that the right category is almost always on screen.
 - **Selective accuracy:** at the abstain threshold, accepted test predictions are ≈ 90% correct (the threshold is set with a statistical safety margin on val, §3.5). Coverage is reported.
 - **Against Claude zero-shot** (given the same category definitions and a few training examples, so the comparison is fair): either the model wins or the cascade (model, plus Claude when it abstains) wins. We report whichever is true.
-- **Latency:** `/classify` under 300 ms on the server. The Claude report arrives in a few seconds.
+- **Geo-prior:** fusing location with the image improves val macro-F1. It's kept only if it does, and test is reported with and without it.
+- **Head-to-head with SF311's suggestion** on the same val photos (never submitted): reported whatever the result.
+- **Latency:** `/classify` under 300 ms on the server, `/context` under 2 s (live city data). The Claude report arrives in a few seconds.
 
 ---
 
@@ -130,6 +150,17 @@ Considered and rejected:
 - **Optional label audit (B):** hand-check about 170 val photos (10 per class) to estimate how often the crowd label is wrong. That's the realistic accuracy ceiling, and a good line for the pitch.
 - **Every number on a slide, in the README or on Devpost** comes from a committed JSON in `reports/`.
 
+### 3.7 Geo-prior: location as a second signal (A builds, B tunes and evaluates)
+**Precedent:** location priors improve fine-grained image classification. On iNaturalist, combining an image model with p(class | location) raised accuracy (Mac Aodha et al., "Presence-Only Geographical Priors for Fine-Grained Image Classification", ICCV 2019). Our own measurement: location alone gets 16.3% top-1 on held-out blocks against 5.9% chance.
+
+**Design (no leakage):**
+- **Source:** DataSF cases of the same 17 class definitions, all sources, **filed 2022-10-01 → 2024-09-30, strictly before our dataset window**. No case overlaps train, val or test, and nothing comes from the future.
+- **Table:** counts per (geohash-6 cell, class), smoothed toward the citywide class distribution: p(c|cell) = (n_cell,c + α·p(c)) / (n_cell + α).
+- **Feature:** the **lift** L(c|cell) = p(c|cell) / p(c), meaning "how much more common this class is *here* than citywide". Using the lift instead of raw frequency stops the prior pushing everything toward garbage, the most common class citywide.
+- **Fusion at inference:** log p(c|img, loc) ∝ log p(c|img) + β · log L(c|cell). **β is tuned on val by B**, and β = 0 means off. Temperature and the abstain threshold are fitted after fusion.
+- The network still sees **pixels only**. Location enters only through this transparent, inspectable table, and only when the phone sends `lat`/`lng`.
+- **Reported on test both with and without the prior,** so the image model's own accuracy is never hidden.
+
 ---
 
 ## 4. Data leakage controls (what's enforced, and where)
@@ -141,7 +172,8 @@ Considered and rejected:
 | Same object straddling neighbouring blocks | **50 m same-class buffer** (dropped 892 train/val photos) | `verify_data.py` (0 pairs) |
 | Near-identical re-uploads | **dHash ≤ 6 bits** across splits (137 dropped) | `verify_data.py` (0 pairs) |
 | One reporter dominating a class | At most 3 photos per address per class at scrape time | `scrape_sf311.py` |
-| Metadata shortcut | Model input is pixels only | Code review of `ml/data.py` |
+| Metadata shortcut | The network sees pixels only. Location enters only through the geo-prior (§3.7). | Code review of `ml/data.py` |
+| Geo-prior leaking held-out cases | The prior is built only from cases filed **before** 2024-10-01 (the dataset starts then); β is tuned on val | `ml/geoprior.py` asserts the date bound |
 | Aspect-ratio shortcut | Fixed-shape crop, no pad, no squash | Code review of `ml/data.py` |
 | Tuning on test (hyperparameters, crop, ensemble, threshold, prompt) | Val for every decision; test once; trainer ≠ evaluator | `guard_repo.py` in CI + TEST_LEDGER |
 | Split files edited | sha256 frozen in `SPLIT_MANIFEST.json` | `verify_data.py` in CI |
@@ -158,7 +190,8 @@ Precedent for why this matters: random hold-outs on spatially autocorrelated ima
    │ photo → JPEG ≤1280px, GPS, language                      ▲ reports table (no photos)
    ▼                                                           │ live subscription → MapKit pins
  Inference API (serve/, FastAPI on the GPU box, HTTPS via cloudflared)
-   ├── POST /classify ── ml/infer.py Predictor (A) + calibration (B) → top-3, abstain
+   ├── POST /classify ── ml/infer.py Predictor (A) + geo-prior (A, β from B) + calibration (B) → top-3, abstain
+   ├── GET  /context ─── serve/citydata.py (B) → live DataSF: open same-type reports ≤75 m, typical fix time
    ├── POST /report ──── serve/claude_report.py (B) → claude-opus-5-5 vision + structured output
    └── GET  /health
 ```
@@ -175,9 +208,9 @@ The model is most of the work, so two people work on it, split the way serious M
 
 | | Owner | Lane | Builds | Hands off |
 |---|---|---|---|---|
-| **A: Training + API host** | Nirvaan (GPU + images) | `ml/`, `serve/app.py`, `serve/classifier.py`, `serve/tests/` | data pipeline, frozen probes, LP-FT on 3 backbones, recipe variants, ensemble, `ml/infer.py`, the API on the GPU box | `val_logits.npz` per run → B; the artifact → B; the API URL → C |
-| **B: Evaluation + Claude** | *(fill in)* | `eval/`, `reports/`, `serve/claude_report.py`, `serve/prompts/` | metrics with bootstrap CIs, the val decision tables, calibration and abstain threshold, Claude report writer, Claude zero-shot baseline, **the one test run**, model card | decision tables → A; calibrated artifact → A; numbers → C |
-| **C: iOS app + submission** | *(fill in)* | `ios/`, `convex/` | SwiftUI app, MapKit + Convex live map, languages, emergency and abstain UX, demo video, Devpost | the demo and the submission |
+| **A: Training + API host** | Nirvaan (GPU + images) | `ml/`, `serve/app.py`, `serve/classifier.py`, `serve/tests/` | data pipeline, frozen probes, LP-FT on 3 backbones, recipe variants, ensemble, `ml/infer.py`, the **geo-prior table**, the API on the GPU box | `val_logits.npz` per run → B; the artifact → B; the API URL → C |
+| **B: Evaluation + Claude + city data** | *(fill in)* | `eval/`, `reports/`, `serve/claude_report.py`, `serve/citydata.py`, `serve/prompts/` | metrics with bootstrap CIs, the val decision tables, geo-prior β, calibration and abstain threshold, the `/context` city-data lookups, the Claude report writer, Claude zero-shot baseline, **the one test run**, model card | decision tables → A; calibrated artifact → A; numbers → C |
+| **C: iOS app + submission** | *(fill in)* | `ios/`, `convex/` | SwiftUI app, **automatic geotagging** (GPS / photo EXIF + address), the "already reported?" and fix-time cards, MapKit + Convex live map, languages, emergency and abstain UX, demo video, Devpost | the demo and the submission |
 
 **Why not split the GPU work across three people?** With one GPU, training runs back to back no matter who launches them, and splitting the launches only adds coordination. What *can* run in parallel is everything around the GPU: evaluation, calibration, Claude, and the app. That's how the work is cut.
 - If B or C can get a **second GPU** (e.g. the Vultr credits from the MLH prize), the obvious use is running backbone 3 and the recipe variants in parallel on it. Same code, same configs.
@@ -233,7 +266,8 @@ C confirms the Anthropic prize's eligibility rules (Hive / Slack #ask-directors)
 - **Functionality:** a native iPhone demo plus a recorded video.
 - **Creativity:** a city's own crowd reports turned into a routing model, with Claude as a multilingual civic assistant.
 - **Technical complexity:**
-  - 3 backbones, LP-FT, an ensemble
+  - 3 backbones, LP-FT, an ensemble, plus an image × location geo-prior
+  - live duplicate detection against city data
   - calibrated abstention with a statistical safety margin
   - a spatially grouped, leakage-audited split
   - cluster-bootstrap CIs and a trainer/evaluator separation
@@ -254,5 +288,6 @@ C confirms the Anthropic prize's eligibility rules (Hive / Slack #ask-directors)
 
 1. **Who is B and who is C?** Plus GitHub handles for `.github/CODEOWNERS`.
 2. **GPU model and memory.** This sets batch size and whether all three backbones plus variants fit before G3.
-3. **Keep the `encampment` class?** Recommendation: keep it in the model (it's real 311 volume, and dropping it would misroute those photos) and apply the §9 guardrails. Dropping it costs nothing if decided before G2.
-4. **Product name.**
+3. **Who has an iOS 26 iPhone** for the SF311 head-to-head (about 20–40 val photos through SF311's photo suggestion; **never press submit**)?
+4. **Keep the `encampment` class?** Recommendation: keep it in the model (it's real 311 volume, and dropping it would misroute those photos) and apply the §9 guardrails. Dropping it costs nothing if decided before G2.
+5. **Product name.**

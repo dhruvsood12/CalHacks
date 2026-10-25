@@ -5,7 +5,8 @@ Everyone builds against these from the start. A's stub API and C's in-app `MockA
 | File | Between | Meaning |
 |---|---|---|
 | `categories.json` | everyone | 17 classes. **`index` = model output index.** Includes display name, primary agency, the SoQL filter that defines the class, and the real-world volume/prior. |
-| `classify.response.schema.json` | A (API) → C | `POST /classify` (multipart field `image`) response: top-3 calibrated probabilities + `abstain` |
+| `classify.response.schema.json` | A (API) → C | `POST /classify` (multipart `image` + optional `lat`, `lng`) response: top-3 calibrated probabilities (geo-prior applied when location is sent), `abstain`, `used_location` |
+| `context.response.schema.json` | B (`serve/citydata.py`) → C | `GET /context?label&lat&lng`: **already reported?** (same-category open reports within 75 m, last 30 days) + **expected fix time** from the city's own history |
 | `report.request.schema.json` | C → A (API) → B's report writer | `POST /report` body: image (base64), the classification, language, location, note |
 | `report.response.schema.json` | B's report writer → A (API) → C | Claude's structured report: category check, text in the user's language + English, agency, next steps, `emergency` |
 | `model_meta.schema.json` | A → B | Artifact metadata: class order, and per-member backbone and preprocessing (a mixed ensemble has different input sizes and normalization). Temperature and abstain threshold are filled in by B on val. |

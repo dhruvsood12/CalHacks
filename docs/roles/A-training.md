@@ -85,7 +85,8 @@ At the end, write `runs/<run>/val_logits.npz` (format in `contracts/predictor.md
 
 ### A4. API host (by G2 for the shape, G3 for the real model)
 - `serve/app.py` (FastAPI):
-  - `POST /classify` (multipart `image`)
+  - `POST /classify` (multipart `image`, optional `lat`/`lng`)
+  - `GET /context` (delegates to B's `serve/citydata.py`)
   - `POST /report` (delegates to B's `serve/claude_report.py`)
   - `GET /health`
 
@@ -98,6 +99,20 @@ At the end, write `runs/<run>/val_logits.npz` (format in `contracts/predictor.md
 - Run it on the GPU box: `uvicorn serve.app:app --host 0.0.0.0 --port 8000`, plus `cloudflared tunnel --url http://localhost:8000` for a public HTTPS URL. **iOS requires HTTPS.** Pin the URL in team chat.
 - Measure `/classify` p50 latency over 20 val images and put it in your G3 PR.
 
+### A6. Geo-prior table (CPU only; build it while the GPU trains, by ~23:00)
+`ml/geoprior.py` (PLAN §3.7):
+1. Pull DataSF cases (all sources) for each of the 17 class filters in `contracts/categories.json` (`sf311_filter`):
+   - **filed 2022-10-01 → 2024-09-30 only.**
+   - Assert in code that no row has `requested_datetime >= 2024-10-01`.
+   - Pull only `lat` and `long` (page with `$limit=50000` / `$offset`, and pilot one class first).
+2. Count per (geohash-6 cell, class). Smooth toward the citywide distribution (α = 20 to start). Store **log-lift** `log(p(c|cell)/p(c))` as `artifacts/geoprior/geoprior.npz` (cells × 17, plus the cell list).
+3. `ml/infer.py`: `Predictor.probs(paths, latlng=None)`. When `latlng` is given:
+   - add `β · log_lift[cell]` to the log-probabilities before the temperature
+   - β comes from `model_meta.json` → `geo_prior_beta`, which B sets on val; it defaults to 0, meaning off
+   - an unknown cell falls back to 0 lift
+4. Give B `geoprior.npz` plus a helper `geoprior.log_lift(lat, lng) -> (17,)`, so B can tune β on val.
+5. `/classify` accepts optional form fields `lat` and `lng` and returns `used_location`.
+
 ### A5. Stretch (only after G3, only if everything above is merged)
 - **Core ML on-device classification** (`coremltools`): the photo never leaves the phone for classification. Hand C the `.mlpackage` only if its val top-1 matches PyTorch within 0.5 points.
 - **Noise-cleaned retrain** (PLAN §3.4 stretch), val-gated.
@@ -108,6 +123,7 @@ At the end, write `runs/<run>/val_logits.npz` (format in `contracts/predictor.md
 | B | `val_logits.npz` for every finished run | as each run ends |
 | B | early artifact, then the final ensemble artifact | 22:00, then ~01:00 |
 | C | public API URL (stub shape works from G2; real model at G3) | G2 / G3 |
+| B | `geoprior.npz` + `log_lift()` helper for β tuning | ~23:00 |
 | B (for the model card) | training configs, run times, GPU | G4 |
 
 ## Done means

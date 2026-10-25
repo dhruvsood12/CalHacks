@@ -1,0 +1,153 @@
+{
+  "window": [
+    "2025-06-15",
+    "2025-06-29"
+  ],
+  "lookback_days": 14,
+  "radius_m": 50,
+  "source": "DataSF 311 Cases vw6y-z8j6, all sources",
+  "computed": "2026-10-24T18:47:23",
+  "overall": {
+    "new_reports": 28431,
+    "already_open_nearby": 12621,
+    "already_open_nearby_pct": 44.4
+  },
+  "per_class": {
+    "garbage_debris": {
+      "new_reports": 14314,
+      "already_open_nearby": 7254,
+      "already_open_nearby_pct": 50.7,
+      "closed_pct": 99.7,
+      "median_days_to_close": 0.43,
+      "p75_days_to_close": 1.13
+    },
+    "graffiti": {
+      "new_reports": 4617,
+      "already_open_nearby": 3412,
+      "already_open_nearby_pct": 73.9,
+      "closed_pct": 96.4,
+      "median_days_to_close": 6.79,
+      "p75_days_to_close": 22.8
+    },
+    "encampment": {
+      "new_reports": 1741,
+      "already_open_nearby": 551,
+      "already_open_nearby_pct": 31.6,
+      "closed_pct": 95.9,
+      "median_days_to_close": 0.47,
+      "p75_days_to_close": 1.19
+    },
+    "parked_on_sidewalk": {
+      "new_reports": 1118,
+      "already_open_nearby": 96,
+      "already_open_nearby_pct": 8.6,
+      "closed_pct": 100.0,
+      "median_days_to_close": 0.09,
+      "p75_days_to_close": 0.22
+    },
+    "blocking_driveway": {
+      "new_reports": 1893,
+      "already_open_nearby": 81,
+      "already_open_nearby_pct": 4.3,
+      "closed_pct": 100.0,
+      "median_days_to_close": 0.05,
+      "p75_days_to_close": 0.09
+    },
+    "abandoned_vehicle": {
+      "new_reports": 811,
+      "already_open_nearby": 177,
+      "already_open_nearby_pct": 21.8,
+      "closed_pct": 100.0,
+      "median_days_to_close": 2.9,
+      "p75_days_to_close": 5.96
+    },
+    "blocked_sidewalk": {
+      "new_reports": 610,
+      "already_open_nearby": 140,
+      "already_open_nearby_pct": 23.0,
+      "closed_pct": 98.9,
+      "median_days_to_close": 0.06,
+      "p75_days_to_close": 0.92
+    },
+    "sidewalk_defect": {
+      "new_reports": 227,
+      "already_open_nearby": 70,
+      "already_open_nearby_pct": 30.8,
+      "closed_pct": 75.8,
+      "median_days_to_close": 13.33,
+      "p75_days_to_close": 25.54
+    },
+    "pavement_defect": {
+      "new_reports": 102,
+      "already_open_nearby": 12,
+      "already_open_nearby_pct": 11.8,
+      "closed_pct": 97.1,
+      "median_days_to_close": 5.56,
+      "p75_days_to_close": 13.61
+    },
+    "curb_ramp_defect": {
+      "new_reports": 47,
+      "already_open_nearby": 3,
+      "already_open_nearby_pct": 6.4,
+      "closed_pct": 85.1,
+      "median_days_to_close": 12.44,
+      "p75_days_to_close": 21.69
+    },
+    "sewer_vent_cover": {
+      "new_reports": 47,
+      "already_open_nearby": 2,
+      "already_open_nearby_pct": 4.3,
+      "closed_pct": 91.5,
+      "median_days_to_close": 16.74,
+      "p75_days_to_close": 29.24
+    },
+    "tree_issue": {
+      "new_reports": 805,
+      "already_open_nearby": 255,
+      "already_open_nearby_pct": 31.7,
+      "closed_pct": 79.6,
+      "median_days_to_close": 51.28,
+      "p75_days_to_close": 96.16
+    },
+    "illegal_posting": {
+      "new_reports": 776,
+      "already_open_nearby": 384,
+      "already_open_nearby_pct": 49.5,
+      "closed_pct": 96.6,
+      "median_days_to_close": 3.06,
+      "p75_days_to_close": 10.4
+    },
+    "litter_receptacle": {
+      "new_reports": 363,
+      "already_open_nearby": 48,
+      "already_open_nearby_pct": 13.2,
+      "closed_pct": 98.6,
+      "median_days_to_close": 1.21,
+      "p75_days_to_close": 3.11
+    },
+    "streetlight": {
+      "new_reports": 154,
+      "already_open_nearby": 6,
+      "already_open_nearby_pct": 3.9,
+      "closed_pct": 98.1,
+      "median_days_to_close": 1.93,
+      "p75_days_to_close": 4.2
+    },
+    "sewer_flooding": {
+      "new_reports": 323,
+      "already_open_nearby": 25,
+      "already_open_nearby_pct": 7.7,
+      "closed_pct": 96.9,
+      "median_days_to_close": 0.09,
+      "p75_days_to_close": 2.89
+    },
+    "traffic_sign": {
+      "new_reports": 483,
+      "already_open_nearby": 105,
+      "already_open_nearby_pct": 21.7,
+      "closed_pct": 99.8,
+      "median_days_to_close": 4.59,
+      "p75_days_to_close": 15.73
+    }
+  }
+}
