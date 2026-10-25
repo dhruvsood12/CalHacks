@@ -25,8 +25,8 @@ C_GRID = (0.0003, 0.001, 0.003, 0.01, 0.03, 0.1, 0.3, 1.0)
 
 def fit(x, y, c, n_classes):
     """Minimize mean cross-entropy + ||W||^2 / (2 C n); same objective as sklearn's C."""
-    w = torch.zeros(x.shape[1], n_classes, dtype=torch.float64, requires_grad=True)
-    b = torch.zeros(n_classes, dtype=torch.float64, requires_grad=True)
+    w = torch.zeros(x.shape[1], n_classes, dtype=torch.float64, device=x.device, requires_grad=True)
+    b = torch.zeros(n_classes, dtype=torch.float64, device=x.device, requires_grad=True)
     opt = torch.optim.LBFGS([w, b], lr=1, max_iter=500, history_size=20, tolerance_grad=1e-6,
                             line_search_fn="strong_wolfe")
     reg = 1.0 / (2 * c * len(y))
@@ -51,19 +51,20 @@ def metrics(logits, y):
 def run_one(feat_dir):
     tr, va = np.load(feat_dir / "train.npz"), np.load(feat_dir / "val.npz")
     mu, sd = tr["feats"].mean(0), tr["feats"].std(0) + 1e-6
-    xt = torch.from_numpy((tr["feats"] - mu) / sd).double()
-    xv = torch.from_numpy((va["feats"] - mu) / sd).double()
-    yt = torch.from_numpy(tr["labels"])
+    dev = torch.device("cuda" if torch.cuda.is_available() else "cpu")  # GPU: no CPU contention on shared pods
+    xt = torch.from_numpy((tr["feats"] - mu) / sd).double().to(dev)
+    xv = torch.from_numpy((va["feats"] - mu) / sd).double().to(dev)
+    yt = torch.from_numpy(tr["labels"]).to(dev)
     yv = va["labels"]
     best, sweep = None, {}
     for c in C_GRID:
         t0 = time.time()
         w, b = fit(xt, yt, c, len(CLASSES))
-        logits = (xv @ w + b).numpy()
+        logits = (xv @ w + b).cpu().numpy()
         m = metrics(logits, yv)
         sweep[str(c)] = {**m, "fit_sec": round(time.time() - t0, 1)}
         if best is None or m["val_macro_f1"] > best[0]["val_macro_f1"]:
-            best = (m, c, w.numpy(), b.numpy(), logits)
+            best = (m, c, w.cpu().numpy(), b.cpu().numpy(), logits)
     m, c, w, b, logits = best
     w_raw = w / sd[:, None]
     b_raw = b - (mu / sd) @ w
