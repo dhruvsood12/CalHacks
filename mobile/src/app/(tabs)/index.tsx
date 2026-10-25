@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { NOTE_LIMIT } from '../../api/types';
 import { AddressEntry } from '../../components/AddressEntry';
@@ -43,6 +43,7 @@ export default function CaptureScreen() {
   const [language, setLanguage] = useState(deviceLanguage);
   const [note, setNote] = useState('');
   const [editing, setEditing] = useState(false);
+  const picking = useRef(false);
 
   async function locate(asset: ImagePicker.ImagePickerAsset | null) {
     setEditing(false);
@@ -61,12 +62,16 @@ export default function CaptureScreen() {
   }
 
   async function takePhoto() {
-    const permission = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert('Camera access is off', 'Turn it on in Settings, or choose a photo from your library.');
+    if (picking.current) {
       return;
     }
+    picking.current = true;
     try {
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert('Camera access is off', 'Turn it on in Settings, or choose a photo from your library.');
+        return;
+      }
       const result = await ImagePicker.launchCameraAsync(CAMERA_OPTIONS);
       if (!result.canceled) {
         setPhoto(result.assets[0]);
@@ -74,14 +79,26 @@ export default function CaptureScreen() {
       }
     } catch {
       Alert.alert('Camera unavailable', 'Choose a photo from your library instead.');
+    } finally {
+      picking.current = false;
     }
   }
 
   async function choosePhoto() {
-    const result = await ImagePicker.launchImageLibraryAsync(LIBRARY_OPTIONS);
-    if (!result.canceled) {
-      setPhoto(result.assets[0]);
-      locate(result.assets[0]);
+    if (picking.current) {
+      return;
+    }
+    picking.current = true;
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync(LIBRARY_OPTIONS);
+      if (!result.canceled) {
+        setPhoto(result.assets[0]);
+        locate(result.assets[0]);
+      }
+    } catch {
+      Alert.alert('Photo library unavailable', 'Try again, or take a photo instead.');
+    } finally {
+      picking.current = false;
     }
   }
 
