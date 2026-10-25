@@ -85,11 +85,11 @@ function mapDraft(
     address: address || null,
     location_source: source,
     language: report.language,
-    title_en: report.title_en,
+    title_en: report.title_en.slice(0, 200),
     model_label: selected,
     confidence: picked?.prob ?? 0,
     chosen_by: !classification.abstain && selected === classification.top_k[0].label ? 'model' : 'resident',
-    agrees_with_classifier: report.agrees_with_classifier,
+    agrees_with_classifier: report.category === selected,
     model_version: classification.model_version,
     city_open_nearby: context?.nearby_open.length ?? 0,
   };
