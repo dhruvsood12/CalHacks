@@ -10,7 +10,7 @@ This is the source of truth. If something here is wrong, fix it with a PR. Don't
 
 ## 1. The goal (what exists at 9 AM)
 
-**One sentence:** On an iPhone, a resident photographs a street problem. In one step, with no menus and no pin-dropping:
+**One sentence:** On a phone (iPhone or Android), a resident photographs a street problem. In one step, with no menus and no pin-dropping:
 - **where:** exact GPS location and the nearest address
 - **what:** our vision model, fine-tuned on about 30k real SF 311 photo reports (with location as a second signal), names the problem and the agency that usually handles it, or says it isn't sure
 - **already reported?** a live check of the city's open reports within 75 m
@@ -26,12 +26,12 @@ This is the source of truth. If something here is wrong, fix it with a PR. Don't
   - **Location improves the prediction:** location *alone* predicts the category at 16.3% top-1 on held-out blocks, against 5.9% chance. That's a second signal to fuse with the image (§3.7).
   - **Accuracy is measured and calibrated, with "not sure".** SF311 publishes no accuracy.
   - **Any language** through Claude. SF311 offers 5 in the app.
-  - **iOS 17+.** SF311 v7 needs iOS 26.
+  - **iPhone (iOS 16.4+) and Android, from one codebase.** SF311 v7 needs iOS 26.
   - **Head-to-head accuracy against SF311's own suggestion:** measured on the same val photos (team task). We claim "more accurate" only if that measurement says so.
 - **Measured and ruled out:** location does *not* improve agency routing. The nearest past report's agency scored 63.5% against 71.5% for the category's usual agency, so we don't claim it. `docs/evidence/location_signal.json`
 
 **The demo (3-minute pitch, about 60 s of it live):**
-1. Open the app on an iPhone and take or choose a photo (a pothole, a dumped mattress, a broken streetlight). The location pins itself: "📍 3601 Lyon St".
+1. Open the app on a phone and take or choose a photo (a pothole, a dumped mattress, a broken streetlight). The location pins itself: "📍 3601 Lyon St".
 2. In about a second: "Pothole or street pavement damage → usually Public Works, 91%", plus two alternatives.
    - **"Already reported 2 days ago, 38 m away, still open."** Options: add yours as confirmation, or file anyway.
    - **"Similar issues are typically fixed in about 6 days."**
@@ -186,9 +186,9 @@ Precedent for why this matters: random hold-outs on spatially autocorrelated ima
 ## 5. System architecture
 
 ```
- iPhone app (ios/, SwiftUI)                                   Convex (convex/)
+ Mobile app (mobile/, Expo React Native, iOS + Android)       Convex (convex/)
    │ photo → JPEG ≤1280px, GPS, language                      ▲ reports table (no photos)
-   ▼                                                           │ live subscription → MapKit pins
+   ▼                                                           │ live subscription → react-native-maps pins
  Inference API (serve/, FastAPI on the GPU box, HTTPS via cloudflared)
    ├── POST /classify ── ml/infer.py Predictor (A) + geo-prior (A, β from B) + calibration (B) → top-3, abstain
    ├── GET  /context ─── serve/citydata.py (B) → live DataSF: open same-type reports ≤75 m, typical fix time
@@ -210,7 +210,7 @@ The model is most of the work, so two people work on it, split the way serious M
 |---|---|---|---|---|
 | **A: Training + API host** | Nirvaan (GPU + images) | `ml/`, `serve/app.py`, `serve/classifier.py`, `serve/tests/` | data pipeline, frozen probes, LP-FT on 3 backbones, recipe variants, ensemble, `ml/infer.py`, the **geo-prior table**, the API on the GPU box | `val_logits.npz` per run → B; the artifact → B; the API URL → C |
 | **B: Evaluation + Claude + city data** | *(fill in)* | `eval/`, `reports/`, `serve/claude_report.py`, `serve/citydata.py`, `serve/prompts/` | metrics with bootstrap CIs, the val decision tables, geo-prior β, calibration and abstain threshold, the `/context` city-data lookups, the Claude report writer, Claude zero-shot baseline, **the one test run**, model card | decision tables → A; calibrated artifact → A; numbers → C |
-| **C: iOS app + submission** | *(fill in)* | `ios/`, `convex/` | SwiftUI app, **automatic geotagging** (GPS / photo EXIF + address), the "already reported?" and fix-time cards, MapKit + Convex live map, languages, emergency and abstain UX, demo video, Devpost | the demo and the submission |
+| **C: mobile app + submission** | *(fill in)* | `mobile/`, `convex/` | Expo React Native app (iOS + Android), **automatic geotagging** (GPS / photo EXIF + address), the "already reported?" and fix-time cards, react-native-maps + Convex live map, languages, emergency and abstain UX, demo video, Devpost | the demo and the submission |
 
 **Why not split the GPU work across three people?** With one GPU, training runs back to back no matter who launches them, and splitting the launches only adds coordination. What *can* run in parallel is everything around the GPU: evaluation, calibration, Claude, and the app. That's how the work is cut.
 - If B or C can get a **second GPU** (e.g. the Vultr credits from the MLH prize), the obvious use is running backbone 3 and the recipe variants in parallel on it. Same code, same configs.
@@ -218,7 +218,7 @@ The model is most of the work, so two people work on it, split the way serious M
 **Briefs** (paste into each person's Claude session):
 - [A: training](docs/roles/A-training.md)
 - [B: evaluation + Claude](docs/roles/B-eval-claude.md)
-- [C: iOS app](docs/roles/C-ios-app.md)
+- [C: mobile app](docs/roles/C-ios-app.md)
 
 **Shared files:** `contracts/`, `data/`, `scripts/`, `PLAN.md`, `CLAUDE.md`, `CONTRIBUTING.md`, `docs/`, `.github/`. These change only in a `shared`-labelled PR with both other approvals.
 
@@ -230,8 +230,8 @@ The model is most of the work, so two people work on it, split the way serious M
 |---|---|---|
 | **G0 Setup** | 19:15 | Everyone has read PLAN + their brief. Roles decided (§10). Environments installed. Own API keys in `.env`. Images on the GPU box. PR #1 merged. |
 | **G1 Contracts frozen** | 20:00 | A's stub API answers over HTTPS. C's app runs on `MockAPI`. B's metrics tests run on synthetic logits. Frozen probes done (`probe_bakeoff.json`). |
-| **G2 Backbones compared** | 23:00 | All three LP-FT runs are done or nearly done. B's val table posted. Claude `/report` is real. C's app calls the real API from a physical iPhone. |
-| **G3 Integration** | 02:00 | Variants done, ensemble chosen on val, calibrated by B. The real model is behind `/classify`. Full flow on the iPhone, including the live map. **`ml/` code freeze**, then B's final eval (once). |
+| **G2 Backbones compared** | 23:00 | All three LP-FT runs are done or nearly done. B's val table posted. Claude `/report` is real. C's app calls the real API from a physical phone. |
+| **G3 Integration** | 02:00 | Variants done, ensemble chosen on val, calibrated by B. The real model is behind `/classify`. Full flow on a phone, including the live map. **`ml/` code freeze**, then B's final eval (once). |
 | **G4 Feature freeze** | 05:00 | `final_eval.json`, `claude_baseline.json` and `MODEL_CARD.md` committed. Bug fixes only. |
 | **G5 Story done** | 07:00 | Demo video recorded. Devpost complete. |
 | **Submit** | **07:45** | Submitted, all teammates listed. Buffer before 9:00. |
@@ -254,7 +254,7 @@ Sleep in shifts after G3. Never leave the merge queue without an owner.
 | **Cal Hacks Best People-First Social Impact** | Language access to city services. Fewer misrouted reports. | C |
 | **Cal Hacks Most Technically Complex** | Three fine-tuned backbones, an ensemble, calibrated selective prediction, a spatial-leakage-proof evaluation | A + B |
 | **Cal Hacks overall (1st–3rd)** | Mapped to the judging criteria below | all |
-| **[Convex] Best use of Convex** | **Only if** the live map really runs on Convex live subscriptions (`ConvexMobile`) | C |
+| **[Convex] Best use of Convex** | **Only if** the live map really runs on Convex live subscriptions (`useQuery` from the `convex` React client) | C |
 | **[MLH] Best Use of Vultr** | **Only if** a GPU or the API actually runs on Vultr | A |
 | **[Microsoft] Built for the Real World** | Real city data, real routing, honest evaluation | C |
 
@@ -263,7 +263,7 @@ C confirms the Anthropic prize's eligibility rules (Hive / Slack #ask-directors)
 **How the plan maps to the Cal Hacks judging criteria:**
 - **Application:** real SF data and agencies, person-in-the-loop.
 - **Intentionality:** language access, "not sure" instead of confident wrong answers, confirmation before filing.
-- **Functionality:** a native iPhone demo plus a recorded video.
+- **Functionality:** a native mobile demo (iOS and Android) plus a recorded video.
 - **Creativity:** a city's own crowd reports turned into a routing model, with Claude as a multilingual civic assistant.
 - **Technical complexity:**
   - 3 backbones, LP-FT, an ensemble, plus an image × location geo-prior

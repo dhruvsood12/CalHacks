@@ -44,5 +44,19 @@ jobs:
         run: |
           npm ci
           npx tsc --noEmit
-# The iOS app is not built in CI (needs a macOS runner and signing); C attaches
-# a screen recording from a real device to each app PR instead.
+
+  mobile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Type-check the Expo app
+        if: hashFiles('mobile/package-lock.json') != ''
+        working-directory: mobile
+        run: |
+          npm ci
+          npx tsc --noEmit
+# The mobile app is type-checked but not built in CI (native builds need signing);
+# C attaches a screen recording from a real device to each app PR instead.
