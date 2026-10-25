@@ -1,3 +1,4 @@
+import { File } from 'expo-file-system';
 import { Api, Classification, CityContext, Report } from './types';
 
 const CLASSIFY_TIMEOUT_MS = 8_000;
@@ -32,7 +33,7 @@ export function httpApi(baseUrl: string): Api {
   return {
     async classify(photo, location) {
       const form = new FormData();
-      form.append('image', { uri: photo.uri, name: 'photo.jpg', type: 'image/jpeg' } as unknown as Blob);
+      form.append('image', new File(photo.uri), 'photo.jpg');
       if (location) {
         form.append('lat', String(location.lat));
         form.append('lng', String(location.lng));
